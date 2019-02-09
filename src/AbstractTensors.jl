@@ -14,7 +14,7 @@ import DirectSum: vectorspace
 
 # parameters accessible from anywhere
 
-vectorspace(::T) where T<:TensorAlgebra{V} where V = V
+Base.@pure vectorspace(::T) where T<:TensorAlgebra{V} where V = V
 
 # universal vector space interopability
 
@@ -23,7 +23,7 @@ vectorspace(::T) where T<:TensorAlgebra{V} where V = V
 # ^^ identity ^^ | vv union vv #
 
 @inline function interop(op::Function,a::A,b::B) where {A<:TensorAlgebra{V},B<:TensorAlgebra{W}} where {V,W}
-    VW = V∪W
+    VW = V ∪ W
     return op(VW(a),VW(b))
 end
 
@@ -31,7 +31,7 @@ end
 
 @inline interform(a::A,b::B) where {A<:TensorAlgebra{V},B<:TensorAlgebra{V}} where V = a(b)
 @inline function interform(a::A,b::B) where {A<:TensorAlgebra{V},B<:TensorAlgebra{W}} where {V,W}
-    VW = V∪W
+    VW = V ∪ W
     return VW(a)(VW(b))
 end
 
@@ -43,7 +43,7 @@ export interop, TensorAlgebra, interform, ⊗
 
 for op ∈ (:(Base.:+),:(Base.:-),:(Base.:*),:⊗)
     @eval begin
-        $op(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = interop($op,a,b)
+        @inline $op(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = interop($op,a,b)
     end
 end
 
