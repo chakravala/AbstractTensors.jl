@@ -42,7 +42,7 @@ export interop, TensorAlgebra, interform, ⊗
 
 # some shared presets
 
-for op ∈ (:(Base.:+),:(Base.:-),:(Base.:*),:⊗,:dot)
+for op ∈ (:(Base.:+),:(Base.:-),:(Base.:*),:⊗,:dot,:(Base.:(==)))
     @eval begin
         @inline $op(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = interop($op,a,b)
     end
