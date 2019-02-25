@@ -11,7 +11,7 @@ abstract type TensorAlgebra{V} end
 # V, VectorSpace produced by DirectSum
 
 import DirectSum: vectorspace
-import LinearAlgebra: dot
+import LinearAlgebra: dot, cross
 
 # parameters accessible from anywhere
 
@@ -42,7 +42,7 @@ export interop, TensorAlgebra, interform, ⊗
 
 # some shared presets
 
-for op ∈ (:(Base.:+),:(Base.:-),:(Base.:*),:⊗,:dot,:(Base.:(==)))
+for op ∈ (:(Base.:+),:(Base.:-),:(Base.:*),:⊗,:dot,:cross,:(Base.:(==)))
     @eval begin
         @inline $op(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = interop($op,a,b)
     end
