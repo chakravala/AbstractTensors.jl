@@ -11,7 +11,7 @@ abstract type TensorAlgebra{V} end
 # V, VectorSpace produced by DirectSum
 
 import DirectSum: vectorspace
-import LinearAlgebra: dot, cross
+import LinearAlgebra: dot, cross, UniformScaling
 
 # parameters accessible from anywhere
 
@@ -45,6 +45,8 @@ export interop, TensorAlgebra, interform, ⊗
 for op ∈ (:(Base.:+),:(Base.:-),:(Base.:*),:⊗,:dot,:cross,:(Base.:(==)))
     @eval begin
         @inline $op(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = interop($op,a,b)
+        @inline $op(a::A,b::UniformScaling) where A<:TensorAlgebra{V} where V = $op(a,V(b))
+        @inline $op(a::UniformScaling,b::B) where B<:TensorAlgebra{V} where V = $op(V(a),b)
     end
 end
 

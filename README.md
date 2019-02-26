@@ -35,6 +35,7 @@ end # this option is automatic with interop(a,b)
 # alternatively for evaluation of forms, VW(a)(VW(b))
 ```
 Some of the method names like `+,-,*,⊗` for `TensorAlgebra` elements are shared across different packages, some of the interoperability is taken care of in this package.
+Additionally, a universal unit volume element can be specified in terms of `LinearAlgebra.UniformScaling`, which is independent of `V` and has its interpretation only instantiated by the context of the `TensorAlgebra{V}` element being operated on.
 
 ### Example with a new subtype
 
@@ -46,11 +47,10 @@ a = SpecialTensor{ℝ}()
 b = SpecialTensor{ℝ'}()
 ```
 To define additional specialized interoperability for further methods, it is necessary to define dispatch that catches well-defined operations for equal `VectorSpace` choices and a fallback method for interoperability, along with a `VectorSpace` morphism:
-
 ```Julia
-op(s::SpecialTensor{V},::SpecialTensor{V}) where V = s # do some kind of operation
-op(a::TensorAlgebra{V},b::TensorAlgebra{W}) where {V,W} = interop(op,a,b) # compat
 (W::VectorSpace)(s::SpecialTensor{V}) where V = SpecialTensor{W}() # conversions
+op(a::SpecialTensor{V},b::SpecialTensor{V}) where V = a # do some kind of operation
+op(a::TensorAlgebra{V},b::TensorAlgebra{W}) where {V,W} = interop(op,a,b) # compat
 ```
 which should satisfy (using the `∪` operation as defined in `DirectSum`)
 ```Julia
@@ -59,7 +59,17 @@ true
 ```
 Thus, interoperability is simply a matter of defining one additional fallback method for the operation and also a new form `VectorSpace` compatibility morphism.
 
-#### Tensor evaluation
+#### UniformScaling pseudoscalar
+
+The universal interoperability of `LinearAlgebra.UniformScaling` as a pseudoscalar element which takes on the `VectorSpace` form of any other `TensorAlgebra` element is handled globally by defining the dispatch:
+```Julia
+(W::VectorSpace)(s::UniformScaling) = ones(ndims(W)) # interpret a unit pseudoscalar
+op(a::TensorAlgebra{V},b::UniformScaling) where V = op(a,V(b)) # right pseudoscalar
+op(a::UniformScaling,b::TensorAlgebra{V}) where V = op(V(a),b) # left pseudoscalar
+```
+This enables the usage of `I` from `LinearAlgebra` as a universal pseudoscalar element.
+
+##### Tensor evaluation
 
 To support a generalized interface for `TensorAlgebra` element evaluation, a similar compatibility interface is constructible.
 
