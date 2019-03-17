@@ -48,7 +48,7 @@ b = SpecialTensor{ℝ'}()
 ```
 To define additional specialized interoperability for further methods, it is necessary to define dispatch that catches well-defined operations for equal `VectorSpace` choices and a fallback method for interoperability, along with a `VectorSpace` morphism:
 ```Julia
-(W::VectorSpace)(s::SpecialTensor{V}) where V = SpecialTensor{W}() # conversions
+(W::Signature)(s::SpecialTensor{V}) where V = SpecialTensor{W}() # conversions
 op(a::SpecialTensor{V},b::SpecialTensor{V}) where V = a # do some kind of operation
 op(a::TensorAlgebra{V},b::TensorAlgebra{W}) where {V,W} = interop(op,a,b) # compat
 ```
@@ -63,7 +63,7 @@ Thus, interoperability is simply a matter of defining one additional fallback me
 
 The universal interoperability of `LinearAlgebra.UniformScaling` as a pseudoscalar element which takes on the `VectorSpace` form of any other `TensorAlgebra` element is handled globally by defining the dispatch:
 ```Julia
-(W::VectorSpace)(s::UniformScaling) = ones(ndims(W)) # interpret a unit pseudoscalar
+(W::Signature)(s::UniformScaling) = ones(ndims(W)) # interpret a unit pseudoscalar
 op(a::TensorAlgebra{V},b::UniformScaling) where V = op(a,V(b)) # right pseudoscalar
 op(a::UniformScaling,b::TensorAlgebra{V}) where V = op(V(a),b) # left pseudoscalar
 ```

@@ -10,7 +10,7 @@ abstract type TensorAlgebra{V} end
 
 # V, VectorSpace produced by DirectSum
 
-import DirectSum: vectorspace
+import DirectSum: vectorspace, value
 import LinearAlgebra: dot, cross, UniformScaling
 
 # parameters accessible from anywhere
@@ -49,5 +49,9 @@ for op ∈ (:(Base.:+),:(Base.:-),:(Base.:*),:⊗,:dot,:cross,:(Base.:(==)))
         @inline $op(a::UniformScaling,b::B) where B<:TensorAlgebra{V} where V = $op(V(a),b)
     end
 end
+
+# absolute value norm
+
+@inline Base.abs(t::T) where T<:TensorAlgebra = sqrt(abs(value(dot(t,t))))
 
 end # module
