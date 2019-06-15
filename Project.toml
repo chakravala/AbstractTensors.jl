@@ -1,0 +1,17 @@
+name = "AbstractTensors"
+uuid = "a8e43f4a-99b7-5565-8bf1-0165161caaea"
+authors = ["Michael Reed"]
+version = "0.1.6"
+
+[deps]
+DirectSum = "22fd7b30-a8c0-5bf2-aabe-97783860d07c"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+
+[compat]
+julia = "1"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]

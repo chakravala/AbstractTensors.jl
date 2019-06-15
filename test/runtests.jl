@@ -30,3 +30,6 @@ op(a::UniformScaling,b::TensorAlgebra{V}) where V = op(V(a),b)
 (a::SpecialTensor{W})(b::SpecialTensor{V}) where {V,W} = interform(a,b)
 @test vectorspace(SpecialTensor{ℝ'}()(SpecialTensor{ℝ}())) == ℝ⊕ℝ'
 @test vectorspace(interform(SpecialTensor{ℝ'}(),SpecialTensor{ℝ}())) == ℝ⊕ℝ'
+
+## pseudoscalar test
+@test !I == |(I)

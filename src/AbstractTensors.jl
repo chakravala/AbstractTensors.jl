@@ -38,11 +38,11 @@ end
 
 # extended compatibility interface
 
-export interop, TensorAlgebra, interform, ⊗
+export interop, TensorAlgebra, interform, ⊗, ⊛, ⊙, ⊠, ⨼, ⨽, ⋆
 
 # some shared presets
 
-for op ∈ (:(Base.:+),:(Base.:-),:(Base.:*),:⊗,:dot,:cross,:(Base.:(==)))
+for op ∈ (:(Base.:+),:(Base.:-),:(Base.:*),:⊗,:⊛,:⊙,:⊠,:⨼,:⨽,:dot,:cross,:(Base.:|),:(Base.:(==)),:(Base.:<),:(Base.:>),:(Base.:<<),:(Base.:>>),:(Base.:>>>),:(Base.div),:(Base.rem),:(Base.:&),:(Base.:^))
     @eval begin
         @inline $op(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = interop($op,a,b)
         @inline $op(a::A,b::UniformScaling) where A<:TensorAlgebra{V} where V = $op(a,V(b))
@@ -50,8 +50,23 @@ for op ∈ (:(Base.:+),:(Base.:-),:(Base.:*),:⊗,:dot,:cross,:(Base.:(==)))
     end
 end
 
+for op ∈ (:(Base.:+),:(Base.:*))
+    @eval $op(t::T) where T<:TensorAlgebra = t
+end
+
+# postfix ? (:⁻¹,:ǂ,:₊,:₋,:ˣ)
+
+⋆(t::UniformScaling{T}) where T = T<:Bool ? (t.λ ? 1 : -1) : t.λ
+⨽(a::TensorAlgebra{V},b::TensorAlgebra{V}) where V = dot(a,b)
+Base.:|(a::TensorAlgebra{V},b::TensorAlgebra{V}) where V = dot(a,b)
+for op ∈ (:|,:!), T ∈ (TensorAlgebra,UniformScaling)
+    @eval Base.$op(t::$T) = ⋆(t)
+end
+
 # absolute value norm
 
 @inline Base.abs(t::T) where T<:TensorAlgebra = sqrt(abs(value(dot(t,t))))
+@inline Base.abs2(t::T) where T<:TensorAlgebra = value(dot(t,t))
+@inline unit(t::T) where T<:TensorAlgebra = t/abs(t)
 
 end # module

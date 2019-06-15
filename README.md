@@ -6,6 +6,7 @@
 [![Build status](https://ci.appveyor.com/api/projects/status/yey8huk505h4b81u?svg=true)](https://ci.appveyor.com/project/chakravala/abstracttensors-jl)
 [![Coverage Status](https://coveralls.io/repos/chakravala/AbstractTensors.jl/badge.svg?branch=master&service=github)](https://coveralls.io/github/chakravala/AbstractTensors.jl?branch=master)
 [![codecov.io](http://codecov.io/github/chakravala/AbstractTensors.jl/coverage.svg?branch=master)](http://codecov.io/github/chakravala/AbstractTensors.jl?branch=master)
+[![Gitter](https://badges.gitter.im/Grassmann-jl/community.svg)](https://gitter.im/Grassmann-jl/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
 This package is intended for universal interoperability of the abstract `TensorAlgebra` type system.
 All `TensorAlgebra{V}` subtypes contain `V` in their type parameters, used to store a `VectorSpace` value obtained from the [DirectSum.jl](https://github.com/chakravala/DirectSum.jl) package.
@@ -89,3 +90,7 @@ The purpose of the `interop` and `interform` methods is to help unify the intero
 By importing the `AbstractTensors` module, the [Reduce.jl](https://github.com/chakravala/Reduce.jl) is able to correctly bypass operations on `TensorAlgebra` elements to the correct methods within the scope of the `Reduce.Algebra` module.
 This requires no additional overhead for the `Grassmann` or `Reduce` packages, because the `AbstractTensors` interoperability interface enables separate precompilation of both.
 Additionally, the `VectorSpace` interoperability also enables more arbitrary inputs.
+
+*AbstractTensors.jl* provides the abstract interoperability between tensor algebras having differing `VectorSpace` parameters. The great thing about it is that the `VectorSpace` unions and intersections are handled separately in a different package and the actual tensor implementations are handled separately also. This enables anyone who wishes to be interoperable with `TensorAlgebra` to build their own subtypes in their own separate package with interoperability automatically possible between it all, provided the guidelines are followed.
+
+The key to making the whole interoperability work is that each `TensorAlgebra` subtype shares a `VectorSpace` parameter (with all `isbitstype` parameters), which contains all the info needed at compile time to make decisions about conversions. So other packages need only use the vector space information to decide on how to convert based on the implementation of a type. If external methods are needed, they can be loaded by `Requires` when making a separate package with `TensorAlgebra` interoperability.
