@@ -35,8 +35,10 @@ end # this option is automatic with interop(a,b)
 
 # alternatively for evaluation of forms, VW(a)(VW(b))
 ```
-Some of the method names like `+,-,*,⊗` for `TensorAlgebra` elements are shared across different packages, some of the interoperability is taken care of in this package.
+Some of operations like `+,-,*,⊗,⊛,⊙,⊠,⨼,⨽,⋆` and postfix operators `⁻¹,ǂ,₊,₋,ˣ` for `TensorAlgebra` elements are shared across different packages, some of the interoperability is taken care of in this package.
 Additionally, a universal unit volume element can be specified in terms of `LinearAlgebra.UniformScaling`, which is independent of `V` and has its interpretation only instantiated by the context of the `TensorAlgebra{V}` element being operated on.
+
+Utility methods such as `scalar, involute, norm, norm2, unit, even, odd` are also defined.
 
 ### Example with a new subtype
 

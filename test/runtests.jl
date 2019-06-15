@@ -31,5 +31,10 @@ op(a::UniformScaling,b::TensorAlgebra{V}) where V = op(V(a),b)
 @test vectorspace(SpecialTensor{ℝ'}()(SpecialTensor{ℝ}())) == ℝ⊕ℝ'
 @test vectorspace(interform(SpecialTensor{ℝ'}(),SpecialTensor{ℝ}())) == ℝ⊕ℝ'
 
-## pseudoscalar test
+## algebraic tests
 @test !I == |(I)
+@test (2)⁻¹ == 1/2
+@test (im)ǂ == -im
+@test (1)ˣ == 1
+@test (1)₊ == 1
+@test (1)₋ == 0
