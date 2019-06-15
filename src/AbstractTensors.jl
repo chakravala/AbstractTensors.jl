@@ -42,7 +42,7 @@ export interop, TensorAlgebra, interform, ⊗, ⊛, ⊙, ⊠, ⨼, ⨽, ⋆
 
 # some shared presets
 
-for op ∈ (:(Base.:+),:(Base.:-),:(Base.:*),:⊗,:⊛,:⊙,:⊠,:⨼,:⨽,:dot,:cross,:(Base.:|),:(Base.:(==)),:(Base.:<),:(Base.:>),:(Base.:<<),:(Base.:>>),:(Base.:>>>),:(Base.div),:(Base.rem),:(Base.:&),:(Base.:^))
+for op ∈ (:(Base.:+),:(Base.:-),:(Base.:*),:⊗,:⊛,:⨼,:⨽,:dot,:cross,:(Base.:|),:(Base.:(==)),:(Base.:<),:(Base.:>),:(Base.:<<),:(Base.:>>),:(Base.:>>>),:(Base.div),:(Base.rem),:(Base.:&),:(Base.:^))
     @eval begin
         @inline $op(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = interop($op,a,b)
         @inline $op(a::A,b::UniformScaling) where A<:TensorAlgebra{V} where V = $op(a,V(b))
@@ -61,6 +61,9 @@ end
 Base.:|(a::TensorAlgebra{V},b::TensorAlgebra{V}) where V = dot(a,b)
 for op ∈ (:|,:!), T ∈ (TensorAlgebra,UniformScaling)
     @eval Base.$op(t::$T) = ⋆(t)
+end
+for op ∈ (:⊙,:⊠)
+    @eval function $op end
 end
 
 # absolute value norm
