@@ -11,7 +11,7 @@ abstract type TensorAlgebra{V} end
 # V, VectorSpace produced by DirectSum
 
 import DirectSum: vectorspace, value, dual
-import LinearAlgebra: dot, cross, norm, UniformScaling
+import LinearAlgebra: dot, cross, norm, UniformScaling, I
 
 # parameters accessible from anywhere
 
@@ -40,11 +40,11 @@ end
 # extended compatibility interface
 
 export TensorAlgebra, interop, interform, scalar, involute, norm, unit, even, odd
-export ⊗, ⊛, ⊙, ⊠, ⨼, ⨽, ⋆, ⁻¹, ǂ, ₊, ₋, ˣ
+export ⊖, ⊗, ⊛, ⊙, ⊠, ⨼, ⨽, ⋆, ∗, ⁻¹, ǂ, ₊, ₋, ˣ
 
 # some shared presets
 
-for op ∈ (:(Base.:+),:(Base.:-),:(Base.:*),:⊗,:⊛,:⨼,:⨽,:dot,:cross,:contraction,:(Base.:|),:(Base.:(==)),:(Base.:<),:(Base.:>),:(Base.:<<),:(Base.:>>),:(Base.:>>>),:(Base.div),:(Base.rem),:(Base.:&),:(Base.:^))
+for op ∈ (:(Base.:+),:(Base.:-),:(Base.:*),:⊗,:⊛,:∗,:⨼,:⨽,:dot,:cross,:contraction,:(Base.:|),:(Base.:(==)),:(Base.:<),:(Base.:>),:(Base.:<<),:(Base.:>>),:(Base.:>>>),:(Base.div),:(Base.rem),:(Base.:&),:(Base.:^))
     @eval begin
         @inline $op(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = interop($op,a,b)
         @inline $op(a::A,b::UniformScaling) where A<:TensorAlgebra{V} where V = $op(a,V(b))
@@ -52,13 +52,14 @@ for op ∈ (:(Base.:+),:(Base.:-),:(Base.:*),:⊗,:⊛,:⨼,:⨽,:dot,:cross,:co
     end
 end
 
+const ⊖ = *
 @inline ⋆(t::UniformScaling{T}) where T = T<:Bool ? (t.λ ? 1 : -1) : t.λ
-@inline ⊛(a::TensorAlgebra{V},b::TensorAlgebra{V}) where V = scalar(contraction(a,b))
-@inline ⨽(a::TensorAlgebra{V},b::TensorAlgebra{V}) where V = contraction(a,b)
-@inline ⨼(a::TensorAlgebra{V},b::TensorAlgebra{V}) where V = contraction(b,a)
-@inline Base.:<(a::TensorAlgebra{V},b::TensorAlgebra{V}) where V = contraction(b,a)
-@inline Base.:>(a::TensorAlgebra{V},b::TensorAlgebra{V}) where V = contraction(a,b)
-@inline Base.:|(a::TensorAlgebra{V},b::TensorAlgebra{V}) where V = contraction(a,b)
+@inline ⊛(a::A,b::B) where {A<:TensorAlgebra{V},B<:TensorAlgebra{V}} where V = scalar(contraction(a,b))
+@inline ⨽(a::A,b::B) where {A<:TensorAlgebra{V},B<:TensorAlgebra{V}} where V = contraction(a,b)
+@inline ⨼(a::A,b::B) where {A<:TensorAlgebra{V},B<:TensorAlgebra{V}} where V = contraction(b,a)
+@inline Base.:<(a::A,b::B) where {A<:TensorAlgebra{V},B<:TensorAlgebra{V}} where V = contraction(b,a)
+@inline Base.:>(a::A,b::B) where {A<:TensorAlgebra{V},B<:TensorAlgebra{V}} where V = contraction(a,b)
+@inline Base.:|(a::A,b::B) where {A<:TensorAlgebra{V},B<:TensorAlgebra{V}} where V = contraction(a,b)
 
 for op ∈ (:(Base.:+),:(Base.:*))
     @eval $op(t::T) where T<:TensorAlgebra = t
@@ -74,12 +75,10 @@ for op ∈ (:scalar,:involute,:even)
 end
 odd(::T) where T<:Number = 0
 
-@inline Base.real(t::T) where T<:TensorAlgebra = scalar(t)
-@inline Base.imag(t::T) where T<:TensorAlgebra = t-real(t)
 @inline Base.exp(t::T) where T<:TensorAlgebra = 1+expm1(t)
 @inline Base.log(b,t::T) where T<:TensorAlgebra = log(t)/log(b)
-@inline ^(b::S,t::T) where {S<:Number,T<:TensorAlgebra} = exp(t*log(b))
-@inline ^(b::S,t::T) where {S<:TensorAlgebra{V},T<:TensorAlgebra{V}} where V = exp(t*log(b))
+@inline Base.:^(b::S,t::T) where {S<:Number,T<:TensorAlgebra} = exp(t*log(b))
+@inline Base.:^(b::S,t::T) where {S<:TensorAlgebra{V},T<:TensorAlgebra{V}} where V = exp(t*log(b))
 
 for base ∈ (2,10)
     fl,fe = (Symbol(:log,base),Symbol(:exp,base))
@@ -115,9 +114,9 @@ Base.cosc(t::T) where T<:TensorAlgebra{V} where V = iszero(t) ? zero(V) : (x=(1*
 # absolute value norm
 
 @inline Base.abs(t::T) where T<:TensorAlgebra{V} where V = sqrt(abs2(t))
-@inline Base.abs2(t::T) where T<:TensorAlgebra = (~t)*t
+@inline Base.abs2(t::T) where T<:TensorAlgebra = t∗t
 @inline norm(t::T) where T<:TensorAlgebra = norm(value(t))
-@inline unit(t::T) where T<:TensorAlgebra = t/value(abs(t))
+@inline unit(t::T) where T<:TensorAlgebra = t/abs(t)
 @inline Base.iszero(t::T) where T<:TensorAlgebra = norm(t) ≈ 0
 @inline Base.isone(t::T) where T<:TensorAlgebra = norm(t) ≈ value(scalar(t)) ≈ 1
 
