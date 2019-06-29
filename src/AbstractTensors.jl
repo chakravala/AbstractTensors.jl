@@ -16,7 +16,7 @@ import LinearAlgebra: dot, cross, norm, UniformScaling, I
 # parameters accessible from anywhere
 
 Base.@pure vectorspace(::T) where T<:TensorAlgebra{V} where V = V
-Base.@pure ndims(::T) where T<:TensorAlgebra{V} where V = ndims(V)
+Base.@pure Base.ndims(::T) where T<:TensorAlgebra{V} where V = ndims(V)
 
 # universal vector space interopability
 
