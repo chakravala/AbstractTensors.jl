@@ -120,6 +120,15 @@ Base.cosc(t::T) where T<:TensorAlgebra{V} where V = iszero(t) ? zero(V) : (x=(1*
 @inline Base.iszero(t::T) where T<:TensorAlgebra = norm(t) ≈ 0
 @inline Base.isone(t::T) where T<:TensorAlgebra = norm(t) ≈ value(scalar(t)) ≈ 1
 
+# identity elements
+
+for id ∈ (:zero,:one)
+    @eval begin
+        @inline Base.$id(::T) where T<:TensorAlgebra{V} where V = zero(V)
+        @inline Base.$id(::Type{T}) where T<:TensorAlgebra{V} where V = zero(V)
+    end
+end
+
 # postfix operators
 
 struct Postfix{Op} end
