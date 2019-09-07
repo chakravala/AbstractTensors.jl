@@ -1,6 +1,5 @@
 using AbstractTensors
 using Test, DirectSum, LinearAlgebra
-import DirectSum: VectorSpace
 
 # example data
 struct SpecialTensor{V} <: TensorAlgebra{V} end

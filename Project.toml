@@ -1,7 +1,7 @@
 name = "AbstractTensors"
 uuid = "a8e43f4a-99b7-5565-8bf1-0165161caaea"
 authors = ["Michael Reed"]
-version = "0.2.1"
+version = "0.3.0"
 
 [deps]
 DirectSum = "22fd7b30-a8c0-5bf2-aabe-97783860d07c"

@@ -6,7 +6,7 @@ module AbstractTensors
 
 # universal root Tensor type
 
-abstract type TensorAlgebra{V} end
+abstract type TensorAlgebra{V} <: Number end
 
 # V, VectorSpace produced by DirectSum
 
@@ -44,7 +44,7 @@ export ⊖, ⊗, ⊛, ⊙, ⊠, ⨼, ⨽, ⋆, ∗, ⁻¹, ǂ, ₊, ₋, ˣ
 
 # some shared presets
 
-for op ∈ (:(Base.:+),:(Base.:-),:(Base.:*),:⊗,:⊛,:∗,:⨼,:⨽,:dot,:cross,:contraction,:(Base.:|),:(Base.:(==)),:(Base.:<),:(Base.:>),:(Base.:<<),:(Base.:>>),:(Base.:>>>),:(Base.div),:(Base.rem),:(Base.:&),:(Base.:^))
+for op ∈ (:(Base.:+),:(Base.:-),:(Base.:*),:⊗,:⊛,:∗,:⨼,:⨽,:dot,:cross,:contraction,:(Base.:|),:(Base.:(==)),:(Base.:<),:(Base.:>),:(Base.:<<),:(Base.:>>),:(Base.:>>>),:(Base.div),:(Base.rem),:(Base.:&))
     @eval begin
         @inline $op(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = interop($op,a,b)
         @inline $op(a::A,b::UniformScaling) where A<:TensorAlgebra{V} where V = $op(a,V(b))
@@ -71,14 +71,15 @@ for op ∈ (:⊙,:⊠)
     @eval function $op end
 end
 for op ∈ (:scalar,:involute,:even)
-    @eval $op(t::T) where T<:Number = t
+    @eval $op(t::T) where T<:Real = t
 end
-odd(::T) where T<:Number = 0
+odd(::T) where T<:Real = 0
 
 @inline Base.exp(t::T) where T<:TensorAlgebra = 1+expm1(t)
 @inline Base.log(b,t::T) where T<:TensorAlgebra = log(t)/log(b)
 @inline Base.:^(b::S,t::T) where {S<:Number,T<:TensorAlgebra} = exp(t*log(b))
-@inline Base.:^(b::S,t::T) where {S<:TensorAlgebra{V},T<:TensorAlgebra{V}} where V = exp(t*log(b))
+@inline Base.:^(a::A,b::UniformScaling) where A<:TensorAlgebra{V} where V = ^(a,V(b))
+@inline Base.:^(a::UniformScaling,b::B) where B<:TensorAlgebra{V} where V = ^(V(a),b)
 
 for base ∈ (2,10)
     fl,fe = (Symbol(:log,base),Symbol(:exp,base))

@@ -3,19 +3,17 @@ language: julia
 os:
   - linux
   - osx
+  - windows
 julia:
   - 0.7
   - 1.0
   - 1.1
+  - 1.2
   - nightly
 matrix:
   allow_failures:
     - julia: nightly
 notifications:
   email: false
-# uncomment the following lines to override the default test script
-#script:
-#  - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
-#  - julia -e 'Pkg.clone(pwd()); Pkg.build("AbstractTensors"); Pkg.test("AbstractTensors"; coverage=true)'
 after_success:
   - julia -e 'using Pkg; Pkg.add("Coverage"); using Coverage; Codecov.submit(process_folder()); Coveralls.submit(process_folder())'
