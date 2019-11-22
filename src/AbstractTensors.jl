@@ -12,6 +12,7 @@ abstract type TensorAlgebra{V} <: Number end
 
 import DirectSum: vectorspace, value, dual
 import LinearAlgebra: dot, cross, norm, UniformScaling, I
+import AbstractLattices: ∨
 
 # parameters accessible from anywhere
 
@@ -67,7 +68,7 @@ end
 for op ∈ (:|,:!), T ∈ (TensorAlgebra,UniformScaling)
     @eval Base.$op(t::$T) = ⋆(t)
 end
-for op ∈ (:⊙,:⊠)
+for op ∈ (:⊙,:⊠,:¬)
     @eval function $op end
 end
 for op ∈ (:scalar,:involute,:even)
@@ -105,12 +106,12 @@ end
 @inline Base.acosh(t::T) where T<:TensorAlgebra = log(t+sqrt(t^2-1))
 @inline Base.atanh(t::T) where T<:TensorAlgebra = (log(1+t)-log(1-t))/2
 @inline Base.acoth(t::T) where T<:TensorAlgebra = (log(t+1)-log(t-1))/2
-Base.asin(t::T) where T<:TensorAlgebra{V} where V =(i=V(I);-i*log(i*t+sqrt(1-t^2)))
-Base.acos(t::T) where T<:TensorAlgebra{V} where V =(i=V(I);-i*log(t+i*sqrt(1-t^2)))
-Base.atan(t::T) where T<:TensorAlgebra{V} where V =(i=V(I);(-i/2)*(log(1+i*t)-log(1-i*t)))
-Base.acot(t::T) where T<:TensorAlgebra{V} where V =(i=V(I);(-i/2)*(log(t-i)-log(t+i)))
-Base.sinc(t::T) where T<:TensorAlgebra{V} where V = iszero(t) ? one(V) : (x=(1*π)*t;sin(x)/x)
-Base.cosc(t::T) where T<:TensorAlgebra{V} where V = iszero(t) ? zero(V) : (x=(1*π)*t; cos(x)/t - sin(x)/(x*t))
+Base.asin(t::T) where T<:TensorAlgebra{V} where V = (i=V(I);-i*log(i*t+sqrt(1-t^2)))
+Base.acos(t::T) where T<:TensorAlgebra{V} where V = (i=V(I);-i*log(t+i*sqrt(1-t^2)))
+Base.atan(t::T) where T<:TensorAlgebra{V} where V = (i=V(I);(-i/2)*(log(1+i*t)-log(1-i*t)))
+Base.acot(t::T) where T<:TensorAlgebra{V} where V = (i=V(I);(-i/2)*(log(t-i)-log(t+i)))
+Base.sinc(t::T) where T<:TensorAlgebra{V} where V =iszero(t) ? one(V) : (x=(1π)*t;sin(x)/x)
+Base.cosc(t::T) where T<:TensorAlgebra{V} where V = iszero(t) ? zero(V) : (x=(1π)*t; cos(x)/t - sin(x)/(x*t))
 
 # absolute value norm
 
@@ -133,7 +134,7 @@ end
 # postfix operators
 
 struct Postfix{Op} end
-@inline Base.:*(t,op::Postfix) = op(t)
+@inline Base.:*(t,op::P) where P<:Postfix = op(t)
 for op ∈ (:⁻¹,:ǂ,:₊,:₋,:ˣ)
     @eval const $op = $(Postfix{op}())
 end

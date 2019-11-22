@@ -1,11 +1,12 @@
 name = "AbstractTensors"
 uuid = "a8e43f4a-99b7-5565-8bf1-0165161caaea"
 authors = ["Michael Reed"]
-version = "0.3.0"
+version = "0.3.1"
 
 [deps]
 DirectSum = "22fd7b30-a8c0-5bf2-aabe-97783860d07c"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+AbstractLattices = "398f06c4-4d28-53ec-89ca-5b2656b7603d"
 
 [compat]
 julia = "1"

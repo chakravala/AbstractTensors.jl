@@ -8,20 +8,20 @@
 [![codecov.io](http://codecov.io/github/chakravala/AbstractTensors.jl/coverage.svg?branch=master)](http://codecov.io/github/chakravala/AbstractTensors.jl?branch=master)
 [![Gitter](https://badges.gitter.im/Grassmann-jl/community.svg)](https://gitter.im/Grassmann-jl/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
-This package is intended for universal interoperability of the abstract `TensorAlgebra` type system.
-All `TensorAlgebra{V}` subtypes contain `V` in their type parameters, used to store a `VectorSpace` value obtained from the [DirectSum.jl](https://github.com/chakravala/DirectSum.jl) package.
+The `AbstractTensors` package is intended for universal interoperability of the abstract `TensorAlgebra` type system.
+All `TensorAlgebra{V}` subtypes have type parameter `V`, used to store a `VectorBundle` value obtained from [DirectSum.jl](https://github.com/chakravala/DirectSum.jl).
 
 For example, this is mainly used in [Grassmann.jl](https://github.com/chakravala/Grassmann.jl) to define various `SubAlgebra`, `TensorTerm` and `TensorMixed` types, each with subtypes. Externalizing the abstract type helps extend the dispatch to other packages.
 ```Julia
 julia> Grassmann.TensorTerm{V,G} <: AbstractTensors.TensorAlgebra{V}
 true
 ```
-By itself, this package does not impose any structure or specifications on the `TensorAlgebra{V}` subtypes and elements, aside from requiring `V` to be a `VectorSpace`.
-This means that different packages can create special types of tensors with shared method names and a common underlying `VectorSpace` structure.
+By itself, this package does not impose any specifications or structure on the `TensorAlgebra{V}` subtypes and elements, aside from requiring `V` to be a `VectorBundle`.
+This means that different packages can create tensor types having a common underlying `VectorBundle` structure.
 
 ## Interoperability
 
-Since `VectorSpace` choices are fundamental to `TensorAlgebra` operations, the universal interoperability between `TensorAlgebra{V}` elements with different associated `VectorSpace` choices is naturally realized by applying the `union` morphism to operations.
+Since `VectorBundle` choices are fundamental to `TensorAlgebra` operations, the universal interoperability between `TensorAlgebra{V}` elements with different associated `VectorBundle` choices is naturally realized by applying the `union` morphism to operations.
 
 ```Julia
 function op(::TensorAlgebra{V},::TensorAlgebra{V}) where V
@@ -49,7 +49,7 @@ struct SpecialTensor{V} <: TensorAlgebra{V} end
 a = SpecialTensor{ℝ}()
 b = SpecialTensor{ℝ'}()
 ```
-To define additional specialized interoperability for further methods, it is necessary to define dispatch that catches well-defined operations for equal `VectorSpace` choices and a fallback method for interoperability, along with a `VectorSpace` morphism:
+To define additional specialized interoperability for further methods, it is necessary to define dispatch that catches well-defined operations for equal `VectorBundle` choices and a fallback method for interoperability, along with a `VectorBundle` morphism:
 ```Julia
 (W::Signature)(s::SpecialTensor{V}) where V = SpecialTensor{W}() # conversions
 op(a::SpecialTensor{V},b::SpecialTensor{V}) where V = a # do some kind of operation
@@ -60,7 +60,7 @@ which should satisfy (using the `∪` operation as defined in `DirectSum`)
 julia> op(a,b) |> vectorspace == vectorspace(a) ∪ vectorspace(b)
 true
 ```
-Thus, interoperability is simply a matter of defining one additional fallback method for the operation and also a new form `VectorSpace` compatibility morphism.
+Thus, interoperability is simply a matter of defining one additional fallback method for the operation and also a new form `VectorBundle` compatibility morphism.
 
 #### UniformScaling pseudoscalar
 
@@ -88,11 +88,5 @@ true
 The purpose of the `interop` and `interform` methods is to help unify the interoperability of `TensorAlgebra` elements.
 
 ### Deployed applications
-
-By importing the `AbstractTensors` module, the [Reduce.jl](https://github.com/chakravala/Reduce.jl) is able to correctly bypass operations on `TensorAlgebra` elements to the correct methods within the scope of the `Reduce.Algebra` module.
-This requires no additional overhead for the `Grassmann` or `Reduce` packages, because the `AbstractTensors` interoperability interface enables separate precompilation of both.
-Additionally, the `VectorSpace` interoperability also enables more arbitrary inputs.
-
-*AbstractTensors.jl* provides the abstract interoperability between tensor algebras having differing `VectorSpace` parameters. The great thing about it is that the `VectorSpace` unions and intersections are handled separately in a different package and the actual tensor implementations are handled separately also. This enables anyone who wishes to be interoperable with `TensorAlgebra` to build their own subtypes in their own separate package with interoperability automatically possible between it all, provided the guidelines are followed.
 
 The key to making the whole interoperability work is that each `TensorAlgebra` subtype shares a `VectorSpace` parameter (with all `isbitstype` parameters), which contains all the info needed at compile time to make decisions about conversions. So other packages need only use the vector space information to decide on how to convert based on the implementation of a type. If external methods are needed, they can be loaded by `Requires` when making a separate package with `TensorAlgebra` interoperability.
