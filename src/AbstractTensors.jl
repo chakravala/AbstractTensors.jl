@@ -10,8 +10,8 @@ abstract type TensorAlgebra{V} <: Number end
 
 # V, VectorSpace produced by DirectSum
 
-import DirectSum: vectorspace, value, dual
-import LinearAlgebra: dot, cross, norm, UniformScaling, I
+import DirectSum: vectorspace, value, dual, norm
+import LinearAlgebra: dot, cross, UniformScaling, I
 import AbstractLattices: ∨
 
 # parameters accessible from anywhere
