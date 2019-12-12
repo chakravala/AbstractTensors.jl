@@ -2,11 +2,14 @@
 
 *TensorAlgebra abstract type system interoperability with VectorSpace parameter*
 
+[![DOI](https://zenodo.org/badge/169811826.svg)](https://zenodo.org/badge/latestdoi/169811826)
+[![Docs Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://grassmann.crucialflow.com/stable)
+[![Docs Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://grassmann.crucialflow.com/dev)
+[![Gitter](https://badges.gitter.im/Grassmann-jl/community.svg)](https://gitter.im/Grassmann-jl/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 [![Build Status](https://travis-ci.org/chakravala/AbstractTensors.jl.svg?branch=master)](https://travis-ci.org/chakravala/AbstractTensors.jl)
 [![Build status](https://ci.appveyor.com/api/projects/status/yey8huk505h4b81u?svg=true)](https://ci.appveyor.com/project/chakravala/abstracttensors-jl)
 [![Coverage Status](https://coveralls.io/repos/chakravala/AbstractTensors.jl/badge.svg?branch=master&service=github)](https://coveralls.io/github/chakravala/AbstractTensors.jl?branch=master)
-[![codecov.io](http://codecov.io/github/chakravala/AbstractTensors.jl/coverage.svg?branch=master)](http://codecov.io/github/chakravala/AbstractTensors.jl?branch=master)
-[![Gitter](https://badges.gitter.im/Grassmann-jl/community.svg)](https://gitter.im/Grassmann-jl/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+[![codecov.io](https://codecov.io/github/chakravala/AbstractTensors.jl/coverage.svg?branch=master)](https://codecov.io/github/chakravala/AbstractTensors.jl?branch=master)
 
 The `AbstractTensors` package is intended for universal interoperability of the abstract `TensorAlgebra` type system.
 All `TensorAlgebra{V}` subtypes have type parameter `V`, used to store a `VectorBundle` value obtained from [DirectSum.jl](https://github.com/chakravala/DirectSum.jl).
