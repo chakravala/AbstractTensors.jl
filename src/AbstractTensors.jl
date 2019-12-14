@@ -61,6 +61,7 @@ const ⊖ = *
 @inline Base.:<(a::A,b::B) where {A<:TensorAlgebra{V},B<:TensorAlgebra{V}} where V = contraction(b,a)
 @inline Base.:>(a::A,b::B) where {A<:TensorAlgebra{V},B<:TensorAlgebra{V}} where V = contraction(a,b)
 @inline Base.:|(a::A,b::B) where {A<:TensorAlgebra{V},B<:TensorAlgebra{V}} where V = contraction(a,b)
+@inline Base.:\(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = inv(a)*b
 
 for op ∈ (:(Base.:+),:(Base.:*))
     @eval $op(t::T) where T<:TensorAlgebra = t
