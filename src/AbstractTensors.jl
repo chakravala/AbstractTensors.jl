@@ -10,8 +10,9 @@ abstract type TensorAlgebra{V} <: Number end
 
 # V, VectorSpace produced by DirectSum
 
-import DirectSum: vectorspace, value, dual, norm
-import LinearAlgebra: dot, cross, UniformScaling, I
+import DirectSum
+import DirectSum: vectorspace, value, dual
+import LinearAlgebra: norm, dot, cross, UniformScaling, I
 import AbstractLattices: ∨
 
 # parameters accessible from anywhere
@@ -118,7 +119,7 @@ Base.cosc(t::T) where T<:TensorAlgebra{V} where V = iszero(t) ? zero(V) : (x=(1�
 
 @inline Base.abs(t::T) where T<:TensorAlgebra{V} where V = sqrt(abs2(t))
 @inline Base.abs2(t::T) where T<:TensorAlgebra = t∗t
-@inline norm(t::T) where T<:TensorAlgebra = norm(value(t))
+@inline norm(t::T) where T<:TensorAlgebra = DirectSum.norm(value(t))
 @inline unit(t::T) where T<:TensorAlgebra = t/abs(t)
 @inline Base.iszero(t::T) where T<:TensorAlgebra = norm(t) ≈ 0
 @inline Base.isone(t::T) where T<:TensorAlgebra = norm(t) ≈ value(scalar(t)) ≈ 1
