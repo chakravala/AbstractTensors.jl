@@ -6,6 +6,11 @@ module AbstractTensors
 
 # universal root Tensor type
 
+"""
+    TensorAlgebra{V} <: Number
+
+Universal root tensor type with `DirectSum.Manifold` instance parameter.
+"""
 abstract type TensorAlgebra{V} <: Number end
 
 # V, VectorSpace produced by DirectSum
@@ -62,7 +67,12 @@ const ⊖ = *
 @inline Base.:<(a::A,b::B) where {A<:TensorAlgebra{V},B<:TensorAlgebra{V}} where V = contraction(b,a)
 @inline Base.:>(a::A,b::B) where {A<:TensorAlgebra{V},B<:TensorAlgebra{V}} where V = contraction(a,b)
 @inline Base.:|(a::A,b::B) where {A<:TensorAlgebra{V},B<:TensorAlgebra{V}} where V = contraction(a,b)
+@inline Base.:/(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = a*inv(b)
+@inline Base.:/(a::UniformScaling,b::B) where B<:TensorAlgebra{V} where V = V(a)*inv(b)
+@inline Base.:/(a::A,b::UniformScaling) where A<:TensorAlgebra{V} where V = a*inv(V(b))
 @inline Base.:\(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = inv(a)*b
+@inline Base.:\(a::UniformScaling,b::B) where B<:TensorAlgebra{V} where V = inv(V(a))*b
+@inline Base.:\(a::A,b::UniformScaling) where A<:TensorAlgebra{V} where V = inv(a)*V(b)
 
 for op ∈ (:(Base.:+),:(Base.:*))
     @eval $op(t::T) where T<:TensorAlgebra = t
