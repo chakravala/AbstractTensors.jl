@@ -13,17 +13,31 @@ Universal root tensor type with `DirectSum.Manifold` instance parameter.
 """
 abstract type TensorAlgebra{V} <: Number end
 
+## Manifold{N}
+
+"""
+    Manifold{n}
+
+Basis parametrization locally homeomorphic to `ℝ^n` product topology.
+"""
+abstract type Manifold{Indices} <: TensorAlgebra{Indices} end
+
 # V, VectorSpace produced by DirectSum
 
-import DirectSum
-import DirectSum: vectorspace, value, dual
-import LinearAlgebra: norm, dot, cross, UniformScaling, I
+value(x::T) where T<:Number = x
+value(x::T) where T<:Manifold = 1
+const vectorspace = Manifold
+import LinearAlgebra
+import LinearAlgebra: dot, cross, UniformScaling, I
 import AbstractLattices: ∨
 
 # parameters accessible from anywhere
 
-Base.@pure vectorspace(::T) where T<:TensorAlgebra{V} where V = V
+Base.@pure Manifold(::T) where T<:TensorAlgebra{V} where V = V
+Base.@pure Manifold(V::T) where T<:Manifold = V
 Base.@pure Base.ndims(::T) where T<:TensorAlgebra{V} where V = ndims(V)
+Base.@pure Base.ndims(::T) where T<:Manifold{n} where n = n
+Base.@pure ==(a::A,b::B) where {A<:Manifold,B<:Manifold} = a === b
 
 # universal vector space interopability
 
@@ -31,22 +45,22 @@ Base.@pure Base.ndims(::T) where T<:TensorAlgebra{V} where V = ndims(V)
 
 # ^^ identity ^^ | vv union vv #
 
-@inline function interop(op::Function,a::A,b::B) where {A<:TensorAlgebra{V},B<:TensorAlgebra{W}} where {V,W}
-    VW = V ∪ W
-    return op(VW(a),VW(b))
+@inline function interop(op::Function,a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra}
+    M = Manifold(a) ∪ Manifold(b)
+    return op(M(a),M(b))
 end
 
 # abstract tensor form evaluation
 
 @inline interform(a::A,b::B) where {A<:TensorAlgebra{V},B<:TensorAlgebra{V}} where V = a(b)
-@inline function interform(a::A,b::B) where {A<:TensorAlgebra{V},B<:TensorAlgebra{W}} where {V,W}
-    VW = V ∪ W
-    return VW(a)(VW(b))
+@inline function interform(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra}
+    M = Manifold(a) ∪ Manifold(b)
+    return M(a)(M(b))
 end
 
 # extended compatibility interface
 
-export TensorAlgebra, interop, interform, scalar, involute, norm, unit, even, odd
+export TensorAlgebra, interop, interform, scalar, involute, unit, even, odd
 export ⊖, ⊗, ⊛, ⊙, ⊠, ⨼, ⨽, ⋆, ∗, ⁻¹, ǂ, ₊, ₋, ˣ
 
 # some shared presets
@@ -54,8 +68,8 @@ export ⊖, ⊗, ⊛, ⊙, ⊠, ⨼, ⨽, ⋆, ∗, ⁻¹, ǂ, ₊, ₋, ˣ
 for op ∈ (:(Base.:+),:(Base.:-),:(Base.:*),:⊗,:⊛,:∗,:⨼,:⨽,:dot,:cross,:contraction,:(Base.:|),:(Base.:(==)),:(Base.:<),:(Base.:>),:(Base.:<<),:(Base.:>>),:(Base.:>>>),:(Base.div),:(Base.rem),:(Base.:&))
     @eval begin
         @inline $op(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = interop($op,a,b)
-        @inline $op(a::A,b::UniformScaling) where A<:TensorAlgebra{V} where V = $op(a,V(b))
-        @inline $op(a::UniformScaling,b::B) where B<:TensorAlgebra{V} where V = $op(V(a),b)
+        @inline $op(a::A,b::UniformScaling) where A<:TensorAlgebra where V = $op(a,Manifold(a)(b))
+        @inline $op(a::UniformScaling,b::B) where B<:TensorAlgebra where V = $op(Manifold(b)(a),b)
     end
 end
 
@@ -68,11 +82,11 @@ const ⊖ = *
 @inline Base.:>(a::A,b::B) where {A<:TensorAlgebra{V},B<:TensorAlgebra{V}} where V = contraction(a,b)
 @inline Base.:|(a::A,b::B) where {A<:TensorAlgebra{V},B<:TensorAlgebra{V}} where V = contraction(a,b)
 @inline Base.:/(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = a*inv(b)
-@inline Base.:/(a::UniformScaling,b::B) where B<:TensorAlgebra{V} where V = V(a)*inv(b)
-@inline Base.:/(a::A,b::UniformScaling) where A<:TensorAlgebra{V} where V = a*inv(V(b))
+@inline Base.:/(a::UniformScaling,b::B) where B<:TensorAlgebra = Manifold(b)(a)*inv(b)
+@inline Base.:/(a::A,b::UniformScaling) where A<:TensorAlgebra = a*inv(Manifold(a)(b))
 @inline Base.:\(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = inv(a)*b
-@inline Base.:\(a::UniformScaling,b::B) where B<:TensorAlgebra{V} where V = inv(V(a))*b
-@inline Base.:\(a::A,b::UniformScaling) where A<:TensorAlgebra{V} where V = inv(a)*V(b)
+@inline Base.:\(a::UniformScaling,b::B) where B<:TensorAlgebra = inv(Manifold(b)(a))*b
+@inline Base.:\(a::A,b::UniformScaling) where A<:TensorAlgebra = inv(a)*Manifold(a)(b)
 
 for op ∈ (:(Base.:+),:(Base.:*))
     @eval $op(t::T) where T<:TensorAlgebra = t
@@ -91,8 +105,8 @@ odd(::T) where T<:Real = 0
 @inline Base.exp(t::T) where T<:TensorAlgebra = 1+expm1(t)
 @inline Base.log(b,t::T) where T<:TensorAlgebra = log(t)/log(b)
 @inline Base.:^(b::S,t::T) where {S<:Number,T<:TensorAlgebra} = exp(t*log(b))
-@inline Base.:^(a::A,b::UniformScaling) where A<:TensorAlgebra{V} where V = ^(a,V(b))
-@inline Base.:^(a::UniformScaling,b::B) where B<:TensorAlgebra{V} where V = ^(V(a),b)
+@inline Base.:^(a::A,b::UniformScaling) where A<:TensorAlgebra = ^(a,Manifold(a)(b))
+@inline Base.:^(a::UniformScaling,b::B) where B<:TensorAlgebra = ^(Manifold(b)(a),b)
 
 for base ∈ (2,10)
     fl,fe = (Symbol(:log,base),Symbol(:exp,base))
@@ -100,8 +114,8 @@ for base ∈ (2,10)
     @eval Base.$fe(t::T) where T<:TensorAlgebra = exp(log($base)*t)
 end
 
-@inline Base.cos(t::T) where T<:TensorAlgebra{V} where V = cosh(V(I)*t)
-@inline Base.sin(t::T) where T<:TensorAlgebra{V} where V = (i=V(I);sinh(i*t)/i)
+@inline Base.cos(t::T) where T<:TensorAlgebra = cosh(Manifold(t)(I)*t)
+@inline Base.sin(t::T) where T<:TensorAlgebra = (i=Manifold(t)(I);sinh(i*t)/i)
 @inline Base.tan(t::T) where T<:TensorAlgebra = sin(t)/cos(t)
 @inline Base.cot(t::T) where T<:TensorAlgebra = cos(t)/sin(t)
 @inline Base.sec(t::T) where T<:TensorAlgebra = inv(cos(t))
@@ -118,28 +132,30 @@ end
 @inline Base.acosh(t::T) where T<:TensorAlgebra = log(t+sqrt(t^2-1))
 @inline Base.atanh(t::T) where T<:TensorAlgebra = (log(1+t)-log(1-t))/2
 @inline Base.acoth(t::T) where T<:TensorAlgebra = (log(t+1)-log(t-1))/2
-Base.asin(t::T) where T<:TensorAlgebra{V} where V = (i=V(I);-i*log(i*t+sqrt(1-t^2)))
-Base.acos(t::T) where T<:TensorAlgebra{V} where V = (i=V(I);-i*log(t+i*sqrt(1-t^2)))
-Base.atan(t::T) where T<:TensorAlgebra{V} where V = (i=V(I);(-i/2)*(log(1+i*t)-log(1-i*t)))
-Base.acot(t::T) where T<:TensorAlgebra{V} where V = (i=V(I);(-i/2)*(log(t-i)-log(t+i)))
-Base.sinc(t::T) where T<:TensorAlgebra{V} where V =iszero(t) ? one(V) : (x=(1π)*t;sin(x)/x)
-Base.cosc(t::T) where T<:TensorAlgebra{V} where V = iszero(t) ? zero(V) : (x=(1π)*t; cos(x)/t - sin(x)/(x*t))
+Base.asin(t::T) where T<:TensorAlgebra = (i=Manifold(t)(I);-i*log(i*t+sqrt(1-t^2)))
+Base.acos(t::T) where T<:TensorAlgebra = (i=Manifold(t)(I);-i*log(t+i*sqrt(1-t^2)))
+Base.atan(t::T) where T<:TensorAlgebra = (i=Manifold(t)(I);(-i/2)*(log(1+i*t)-log(1-i*t)))
+Base.acot(t::T) where T<:TensorAlgebra = (i=Manifold(t)(I);(-i/2)*(log(t-i)-log(t+i)))
+Base.sinc(t::T) where T<:TensorAlgebra = iszero(t) ? one(Manifold(t)) : (x=(1π)*t;sin(x)/x)
+Base.cosc(t::T) where T<:TensorAlgebra = iszero(t) ? zero(Manifold(t)) : (x=(1π)*t; cos(x)/t - sin(x)/(x*t))
 
 # absolute value norm
 
-@inline Base.abs(t::T) where T<:TensorAlgebra{V} where V = sqrt(abs2(t))
+@inline Base.abs(t::T) where T<:TensorAlgebra = sqrt(abs2(t))
 @inline Base.abs2(t::T) where T<:TensorAlgebra = t∗t
-@inline norm(t::T) where T<:TensorAlgebra = DirectSum.norm(value(t))
+@inline norm(z) = LinearAlgebra.norm(z)
+@inline LinearAlgebra.norm(t::T) where T<:TensorAlgebra = norm(value(t))
 @inline unit(t::T) where T<:TensorAlgebra = t/abs(t)
-@inline Base.iszero(t::T) where T<:TensorAlgebra = norm(t) ≈ 0
-@inline Base.isone(t::T) where T<:TensorAlgebra = norm(t) ≈ value(scalar(t)) ≈ 1
+@inline Base.iszero(t::T) where T<:TensorAlgebra = LinearAlgebra.norm(t) ≈ 0
+@inline Base.isone(t::T) where T<:TensorAlgebra = LinearAlgebra.norm(t)≈value(scalar(t))≈1
 
 # identity elements
 
 for id ∈ (:zero,:one)
     @eval begin
-        @inline Base.$id(::T) where T<:TensorAlgebra{V} where V = zero(V)
+        @inline Base.$id(t::T) where T<:TensorAlgebra = zero(Manifold(t))
         @inline Base.$id(::Type{T}) where T<:TensorAlgebra{V} where V = zero(V)
+        @inline Base.$id(t::Type{T}) where T<:Manifold = zero(t())
     end
 end
 
