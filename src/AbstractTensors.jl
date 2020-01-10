@@ -1,5 +1,5 @@
 
-#   This file is part of AbstractTensors.jl. It is licensed under the GPL license
+#   This file is part of AbstractTensors.jl. It is licensed under the AGPL license
 #   Grassmann Copyright (C) 2019 Michael Reed
 
 module AbstractTensors
@@ -37,7 +37,6 @@ Base.@pure Manifold(::T) where T<:TensorAlgebra{V} where V = V
 Base.@pure Manifold(V::T) where T<:Manifold = V
 Base.@pure Base.ndims(::T) where T<:TensorAlgebra{V} where V = ndims(V)
 Base.@pure Base.ndims(::T) where T<:Manifold{n} where n = n
-Base.@pure ==(a::A,b::B) where {A<:Manifold,B<:Manifold} = a === b
 
 # universal vector space interopability
 
@@ -45,18 +44,22 @@ Base.@pure ==(a::A,b::B) where {A<:Manifold,B<:Manifold} = a === b
 
 # ^^ identity ^^ | vv union vv #
 
-@inline function interop(op::Function,a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra}
-    M = Manifold(a) ∪ Manifold(b)
-    return op(M(a),M(b))
+for T ∈ (TensorAlgebra,Manifold)
+    @eval begin
+        @inline function interop(op::Function,a::A,b::B) where {A<:$T,B<:$T}
+            M = Manifold(a) ∪ Manifold(b)
+            return op(M(a),M(b))
+        end
+        @inline function interform(a::A,b::B) where {A<:$T,B<:$T}
+            M = Manifold(a) ∪ Manifold(b)
+            return M(a)(M(b))
+        end
+    end
 end
 
 # abstract tensor form evaluation
 
 @inline interform(a::A,b::B) where {A<:TensorAlgebra{V},B<:TensorAlgebra{V}} where V = a(b)
-@inline function interform(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra}
-    M = Manifold(a) ∪ Manifold(b)
-    return M(a)(M(b))
-end
 
 # extended compatibility interface
 
@@ -68,8 +71,8 @@ export ⊖, ⊗, ⊛, ⊙, ⊠, ⨼, ⨽, ⋆, ∗, ⁻¹, ǂ, ₊, ₋, ˣ
 for op ∈ (:(Base.:+),:(Base.:-),:(Base.:*),:⊗,:⊛,:∗,:⨼,:⨽,:dot,:cross,:contraction,:(Base.:|),:(Base.:(==)),:(Base.:<),:(Base.:>),:(Base.:<<),:(Base.:>>),:(Base.:>>>),:(Base.div),:(Base.rem),:(Base.:&))
     @eval begin
         @inline $op(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = interop($op,a,b)
-        @inline $op(a::A,b::UniformScaling) where A<:TensorAlgebra where V = $op(a,Manifold(a)(b))
-        @inline $op(a::UniformScaling,b::B) where B<:TensorAlgebra where V = $op(Manifold(b)(a),b)
+        @inline $op(a::A,b::UniformScaling) where A<:TensorAlgebra = $op(a,Manifold(a)(b))
+        @inline $op(a::UniformScaling,b::B) where B<:TensorAlgebra = $op(Manifold(b)(a),b)
     end
 end
 
