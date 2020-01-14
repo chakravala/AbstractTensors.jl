@@ -1,6 +1,6 @@
 # AbstractTensors.jl
 
-*TensorAlgebra abstract type system interoperability with VectorSpace parameter*
+*Tensor algebra abstract type interoperability with vector bundle parameter*
 
 [![DOI](https://zenodo.org/badge/169811826.svg)](https://zenodo.org/badge/latestdoi/169811826)
 [![Docs Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://grassmann.crucialflow.com/stable)
@@ -14,12 +14,8 @@
 The `AbstractTensors` package is intended for universal interoperability of the abstract `TensorAlgebra` type system.
 All `TensorAlgebra{V}` subtypes have type parameter `V`, used to store a `VectorBundle` value obtained from [DirectSum.jl](https://github.com/chakravala/DirectSum.jl).
 
-For example, this is mainly used in [Grassmann.jl](https://github.com/chakravala/Grassmann.jl) to define various `SubAlgebra`, `TensorTerm` and `TensorMixed` types, each with subtypes. Externalizing the abstract type helps extend the dispatch to other packages.
-```Julia
-julia> Grassmann.TensorTerm{V,G} <: AbstractTensors.TensorAlgebra{V}
-true
-```
-By itself, this package does not impose any specifications or structure on the `TensorAlgebra{V}` subtypes and elements, aside from requiring `V` to be a `VectorBundle`.
+For example, this is mainly used in [Grassmann.jl](https://github.com/chakravala/Grassmann.jl) to define various `SubAlgebra`, `TensorGraded` and `TensorMixed` types, each with subtypes. Externalizing the abstract type helps extend the dispatch to other packages.
+By itself, this package does not impose any specifications or structure on the `TensorAlgebra{V}` subtypes and elements, aside from requiring `V` to be a `Manifold`.
 This means that different packages can create tensor types having a common underlying `VectorBundle` structure.
 
 ## Interoperability
@@ -52,7 +48,7 @@ struct SpecialTensor{V} <: TensorAlgebra{V} end
 a = SpecialTensor{ℝ}()
 b = SpecialTensor{ℝ'}()
 ```
-To define additional specialized interoperability for further methods, it is necessary to define dispatch that catches well-defined operations for equal `VectorBundle` choices and a fallback method for interoperability, along with a `VectorBundle` morphism:
+To define additional specialized interoperability for further methods, it is necessary to define dispatch that catches well-defined operations for equal `VectorBundle` choices and a fallback method for interoperability, along with a `Manifold` morphism:
 ```Julia
 (W::Signature)(s::SpecialTensor{V}) where V = SpecialTensor{W}() # conversions
 op(a::SpecialTensor{V},b::SpecialTensor{V}) where V = a # do some kind of operation
@@ -60,14 +56,14 @@ op(a::TensorAlgebra{V},b::TensorAlgebra{W}) where {V,W} = interop(op,a,b) # comp
 ```
 which should satisfy (using the `∪` operation as defined in `DirectSum`)
 ```Julia
-julia> op(a,b) |> vectorspace == vectorspace(a) ∪ vectorspace(b)
+julia> op(a,b) |> Manifold == Manifold(a) ∪ Manifold(b)
 true
 ```
 Thus, interoperability is simply a matter of defining one additional fallback method for the operation and also a new form `VectorBundle` compatibility morphism.
 
 #### UniformScaling pseudoscalar
 
-The universal interoperability of `LinearAlgebra.UniformScaling` as a pseudoscalar element which takes on the `VectorSpace` form of any other `TensorAlgebra` element is handled globally by defining the dispatch:
+The universal interoperability of `LinearAlgebra.UniformScaling` as a pseudoscalar element which takes on the `VectorBundle` form of any other `TensorAlgebra` element is handled globally by defining the dispatch:
 ```Julia
 (W::Signature)(s::UniformScaling) = ones(ndims(W)) # interpret a unit pseudoscalar
 op(a::TensorAlgebra{V},b::UniformScaling) where V = op(a,V(b)) # right pseudoscalar
@@ -85,11 +81,11 @@ To support a generalized interface for `TensorAlgebra` element evaluation, a sim
 ```
 which should satisfy (using the `∪` operation as defined in `DirectSum`)
 ```Julia
-julia> b(a) |> vectorspace == vectorspace(a) ∪ vectorspace(b)
+julia> b(a) |> Manifold == Manifold(a) ∪ Manifold(b)
 true
 ```
 The purpose of the `interop` and `interform` methods is to help unify the interoperability of `TensorAlgebra` elements.
 
 ### Deployed applications
 
-The key to making the whole interoperability work is that each `TensorAlgebra` subtype shares a `VectorSpace` parameter (with all `isbitstype` parameters), which contains all the info needed at compile time to make decisions about conversions. So other packages need only use the vector space information to decide on how to convert based on the implementation of a type. If external methods are needed, they can be loaded by `Requires` when making a separate package with `TensorAlgebra` interoperability.
+The key to making the whole interoperability work is that each `TensorAlgebra` subtype shares a `VectorBundle` parameter (with all `isbitstype` parameters), which contains all the info needed at compile time to make decisions about conversions. So other packages need only use the vector space information to decide on how to convert based on the implementation of a type. If external methods are needed, they can be loaded by `Requires` when making a separate package with `TensorAlgebra` interoperability.

@@ -9,72 +9,153 @@ module AbstractTensors
 """
     TensorAlgebra{V} <: Number
 
-Universal root tensor type with `DirectSum.Manifold` instance parameter.
+Universal root tensor type with `Manifold` instance parameter `V`.
 """
 abstract type TensorAlgebra{V} <: Number end
+Base.@pure istensor(t::T) where T<:TensorAlgebra = true
+Base.@pure istensor(t) = false
 
 ## Manifold{n}
 
 """
-    Manifold{n}
+    Manifold{n} <: TensorAlgebra
 
 Basis parametrization locally homeomorphic to `ℝ^n` product topology.
 """
 abstract type Manifold{n} <: TensorAlgebra{n} end
+Base.@pure ismanifold(t::T) where T<:Manifold = true
+Base.@pure ismanifold(t) = false
 
-# V, VectorSpace produced by DirectSum
+"""
+    TensorGraded{V,n} <: Manifold{n} <: TensorAlgebra
 
-value(x::T) where T<:Number = x
-value(x::T) where T<:Manifold = 1
-const vectorspace = Manifold
-import LinearAlgebra
-import LinearAlgebra: dot, cross, UniformScaling, I
-import AbstractLattices: ∨
+Graded elements of a `TensorAlgebra` in a `Manifold` topology.
+"""
+abstract type TensorGraded{V,G} <: Manifold{G} end
+const TAG = (:TensorAlgebra,:TensorGraded)
+Base.@pure isgraded(t::T) where T<:TensorGraded = true
+Base.@pure isgraded(t) = false
 
 # parameters accessible from anywhere
 
 Base.@pure Manifold(::T) where T<:TensorAlgebra{V} where V = V
+Base.@pure Manifold(::T) where T<:TensorGraded{V} where V = V
 Base.@pure Manifold(V::T) where T<:Manifold = V
-Base.@pure Base.ndims(::T) where T<:TensorAlgebra{V} where V = ndims(V)
-Base.@pure Base.ndims(::T) where T<:Manifold{n} where n = n
-Base.@pure LinearAlgebra.rank(::T) where T<:Manifold{n} where n = n
-function valuetype end
-function isapprox(a::S,b::T) where {S<:TensorAlgebra,T<:TensorAlgebra}
+
+import LinearAlgebra
+import LinearAlgebra: UniformScaling, I, rank
+import AbstractLattices: ∧, ∨
+
+"""
+    rank(::Manifold{n})
+
+Dimensionality `n` of the `Manifold{n}` subspace representation.
+"""
+Base.@pure LinearAlgebra.rank(::M) where M<:Manifold{n} where n = n
+
+"""
+    ndims(::TensorAlgebra)
+
+Dimensionality `n` of the psuedoscalar `Manifold{n}` of an element.
+"""
+Base.@pure Base.ndims(::T) where T<:TensorAlgebra{M} where M = rank(M)
+Base.@pure Base.ndims(::T) where T<:TensorGraded{M} where M = rank(M)
+Base.@pure Base.ndims(M::T) where T<:Manifold = rank(M)
+
+"""
+    scalar(::TensorAlgebra)
+
+Return the scalar (rank 0) part of any `TensorAlgebra` element.
+"""
+@inline scalar(t::T) where T<:TensorGraded{V} where V = zero(V)
+@inline scalar(t::T) where T<:TensorGraded{V,0} where V = t
+@inline isscalar(t::T) where T<:TensorGraded = rank(t) == 0 || iszero(t)
+
+"""
+    vector(::TensorAlgebra)
+
+Return the vector (rank 1) part of any `TensorAlgebra` element.
+"""
+@inline vector(t::T) where T<:TensorGraded{V} where V = zero(V)
+@inline vector(t::T) where T<:TensorGraded{V,1} where V = t
+@inline isvector(t::T) where T<:TensorGraded = rank(t) == 1 || iszero(t)
+
+"""
+    bivector(::TensorAlgebra)
+
+Return the bivector (rank 2) part of any `TensorAlgebra` element.
+"""
+@inline bivector(t::T) where T<:Manifold{2} = t
+@inline bivector(t::T) where T<:TensorGraded{V} where V = zero(V)
+@inline isbivector(t::T) where T<:TensorGraded = rank(t) == 2 || iszero(t)
+
+"""
+    volume(::TensorAlgebra)
+
+Return the pseudoscalar (full rank) part of any `TensorAlgebra` element.
+"""
+@inline volume(t::T) where T<:Manifold = t
+@inline volume(t::T) where T<:TensorGraded{V,G} where {V,G} = G == ndims(V) ? t : zero(V)
+@inline isvolume(t::T) where T<:TensorGraded = rank(t) == ndims(t) || iszero(t)
+
+"""
+    value(::TensorAlgebra)
+
+Returns the internal representation of a `TensorAlgebra` element value.
+"""
+value(t::T) where T<:Number = t
+
+"""
+    valuetype(t::TensorAlgebra)
+
+Returns type of a `TensorAlgebra` element value's internal representation.
+"""
+valuetype(::T) where T<:Number = T
+
+function Base.isapprox(a::S,b::T) where {S<:TensorAlgebra,T<:TensorAlgebra}
     rtol = Base.rtoldefault(valuetype(a), valuetype(b), 0)
     LinearAlgebra.norm(Base.:-(a,b))≤rtol*max(LinearAlgebra.norm(a),LinearAlgebra.norm(b))
 end
+function Base.isapprox(a::S,b::T) where {S<:TensorGraded,T<:TensorGraded}
+    Manifold(a)==Manifold(b) && (rank(a)==rank(b) ? AbstractTensors.:≈(norm(a),norm(b)) : (isnull(a) && isnull(b)))
+end
 
-# universal vector space interopability
+# universal vector space interopability, abstract tensor form evaluation, contraction
 
-@inline interop(op::Function,a::A,b::B) where {A<:TensorAlgebra{V},B<:TensorAlgebra{V}} where V = op(a,b)
-
-# ^^ identity ^^ | vv union vv #
-
-for T ∈ (TensorAlgebra,Manifold)
+for X ∈ TAG, Y ∈ TAG
+    Z = :({A<:$X{V},B<:$Y{V}})
     @eval begin
-        @inline function interop(op::Function,a::A,b::B) where {A<:$T,B<:$T}
+        @inline interop(op::Function,a::A,b::B) where {A<:$X{V},B<:$Y{V}} where V = op(a,b)
+        @inline interform(a::A,b::B) where {A<:$X{V},B<:$Y{V}} where V = a(b)
+        # ^^ identity ^^ | vv union vv #
+        @inline function interop(op::Function,a::A,b::B) where {A<:$X,B<:$Y}
             M = Manifold(a) ∪ Manifold(b)
             return op(M(a),M(b))
         end
-        @inline function interform(a::A,b::B) where {A<:$T,B<:$T}
+        @inline function interform(a::A,b::B) where {A<:$X,B<:$Y}
             M = Manifold(a) ∪ Manifold(b)
             return M(a)(M(b))
         end
+        @inline ∗(a::A,b::B) where {A<:$X{V},B<:$Y{V}} where V = (~a)*b
+        @inline ⊛(a::A,b::B) where {A<:$X{V},B<:$Y{V}} where V = scalar(contraction(a,b))
+        @inline ⨼(a::A,b::B) where {A<:$X{V},B<:$Y{V}} where V = contraction(b,a)
+        @inline Base.:<(a::A,b::B) where {A<:$X{V},B<:$Y{V}} where V = contraction(b,a)
+    end
+    for op ∈ (:⨽,:(Base.:>),:(Base.:|),:(LinearAlgebra.dot))
+        @eval @inline $op(a::A,b::B) where {A<:$X{V},B<:$Y{V}} where V = contraction(a,b)
     end
 end
 
-# abstract tensor form evaluation
-
-@inline interform(a::A,b::B) where {A<:TensorAlgebra{V},B<:TensorAlgebra{V}} where V = a(b)
-
 # extended compatibility interface
 
-export TensorAlgebra, interop, interform, scalar, involute, unit, even, odd
-export ⊖, ⊗, ⊛, ⊙, ⊠, ⨼, ⨽, ⋆, ∗, ⁻¹, ǂ, ₊, ₋, ˣ
+export TensorAlgebra, Manifold, TensorGraded, istensor, isgraded, ismanifold, rank
+export scalar, isscalar, vector, isvector, bivector, isbivector, volume, isvolume
+export value, valuetype, interop, interform, involute, unit, even, odd, contraction
+export ⊘, ⊖, ⊗, ⊛, ⊙, ⊠, ×, ⨼, ⨽, ⋆, ∗, ⁻¹, ǂ, ₊, ₋, ˣ
 
 # some shared presets
 
-for op ∈ (:(Base.:+),:(Base.:-),:(Base.:*),:⊗,:⊛,:∗,:⨼,:⨽,:dot,:cross,:contraction,:(Base.:|),:(Base.:(==)),:(Base.:<),:(Base.:>),:(Base.:<<),:(Base.:>>),:(Base.:>>>),:(Base.div),:(Base.rem),:(Base.:&))
+for op ∈ (:(Base.:+),:(Base.:-),:(Base.:*),:⊘,:⊗,:⊛,:∗,:⨼,:⨽,:(LinearAlgebra.dot),:(LinearAlgebra.cross),:contraction,:(Base.:|),:(Base.:(==)),:(Base.:<),:(Base.:>),:(Base.:<<),:(Base.:>>),:(Base.:>>>),:(Base.div),:(Base.rem),:(Base.:&))
     @eval begin
         @inline $op(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = interop($op,a,b)
         @inline $op(a::A,b::UniformScaling) where A<:TensorAlgebra = $op(a,Manifold(a)(b))
@@ -84,12 +165,6 @@ end
 
 const ⊖ = *
 @inline ⋆(t::UniformScaling{T}) where T = T<:Bool ? (t.λ ? 1 : -1) : t.λ
-@inline ⊛(a::A,b::B) where {A<:TensorAlgebra{V},B<:TensorAlgebra{V}} where V = scalar(contraction(a,b))
-@inline ⨽(a::A,b::B) where {A<:TensorAlgebra{V},B<:TensorAlgebra{V}} where V = contraction(a,b)
-@inline ⨼(a::A,b::B) where {A<:TensorAlgebra{V},B<:TensorAlgebra{V}} where V = contraction(b,a)
-@inline Base.:<(a::A,b::B) where {A<:TensorAlgebra{V},B<:TensorAlgebra{V}} where V = contraction(b,a)
-@inline Base.:>(a::A,b::B) where {A<:TensorAlgebra{V},B<:TensorAlgebra{V}} where V = contraction(a,b)
-@inline Base.:|(a::A,b::B) where {A<:TensorAlgebra{V},B<:TensorAlgebra{V}} where V = contraction(a,b)
 @inline Base.:/(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = a*Base.inv(b)
 @inline Base.:/(a::UniformScaling,b::B) where B<:TensorAlgebra = Manifold(b)(a)*Base.inv(b)
 @inline Base.:/(a::A,b::UniformScaling) where A<:TensorAlgebra = a*Base.inv(Manifold(a)(b))
@@ -103,13 +178,14 @@ end
 for op ∈ (:|,:!), T ∈ (TensorAlgebra,UniformScaling)
     @eval Base.$op(t::$T) = ⋆(t)
 end
-for op ∈ (:⊙,:⊠,:¬)
+for op ∈ (:⊙,:⊠,:¬,:⋆)
     @eval function $op end
 end
 for op ∈ (:scalar,:involute,:even)
     @eval $op(t::T) where T<:Real = t
 end
 odd(::T) where T<:Real = 0
+LinearAlgebra.cross(t::T...) where T<:TensorAlgebra = ⋆(∧(t...))
 
 @inline Base.exp(t::T) where T<:TensorAlgebra = 1+Base.expm1(t)
 @inline Base.log(b,t::T) where T<:TensorAlgebra = Base.log(t)/Base.log(b)
@@ -152,11 +228,13 @@ Base.cosc(t::T) where T<:TensorAlgebra = iszero(t) ? zero(Manifold(t)) : (x=(1π
 
 @inline Base.abs(t::T) where T<:TensorAlgebra = Base.sqrt(Base.abs2(t))
 @inline Base.abs2(t::T) where T<:TensorAlgebra = t∗t
+@inline Base.abs2(t::T) where T<:TensorGraded = contraction(t,t)
 @inline norm(z) = LinearAlgebra.norm(z)
 @inline LinearAlgebra.norm(t::T) where T<:TensorAlgebra = norm(value(t))
 @inline unit(t::T) where T<:TensorAlgebra = Base.:/(t,Base.abs(t))
 @inline Base.iszero(t::T) where T<:TensorAlgebra = LinearAlgebra.norm(t) ≈ 0
 @inline Base.isone(t::T) where T<:TensorAlgebra = LinearAlgebra.norm(t)≈value(scalar(t))≈1
+@inline contraction(a::A,b::B) where {A<:TensorGraded,B<:TensorGraded} = contraction(a,b)
 
 # identity elements
 
@@ -164,7 +242,7 @@ for id ∈ (:zero,:one)
     @eval begin
         @inline Base.$id(t::T) where T<:TensorAlgebra = zero(Manifold(t))
         @inline Base.$id(::Type{T}) where T<:TensorAlgebra{V} where V = zero(V)
-        @inline Base.$id(t::Type{T}) where T<:Manifold = zero(t())
+        @inline Base.$id(::Type{T}) where T<:TensorGraded{V} where V = zero(V)
     end
 end
 
@@ -183,6 +261,11 @@ end
 
 # dispatch
 
+@inline norm(z::Expr) = abs(z)
+@inline norm(z::Symbol) = z
+Base.@pure isnull(::Expr) = false
+Base.@pure isnull(::Symbol) = false
+isnull(n) = iszero(n)
 signbit(x::Symbol) = false
 signbit(x::Expr) = x.head == :call && x.args[1] == :-
 -(x) = Base.:-(x)
@@ -196,6 +279,14 @@ for op ∈ (:/,:-,:^,:≈)
     @eval @inline $op(a,b) = Base.$op(a,b)
 end
 
+for T ∈ (Expr,Symbol)
+    @eval begin
+        ≈(a::$T,b::$T) = a == b
+        ≈(a::$T,b) = false
+        ≈(a,b::$T) = false
+    end
+end
+
 for (OP,op) ∈ ((:∏,:*),(:∑,:+))
     @eval begin
         @inline $OP(x...) = Base.$op(x...)
@@ -204,16 +295,5 @@ for (OP,op) ∈ ((:∏,:*),(:∑,:+))
 end
 
 const PROD,SUM,SUB = ∏,∑,-
-
-@inline norm(z::Expr) = abs(z)
-@inline norm(z::Symbol) = z
-
-for T ∈ (Expr,Symbol)
-    @eval begin
-        ≈(a::$T,b::$T) = a == b
-        ≈(a::$T,b) = false
-        ≈(a,b::$T) = false
-    end
-end
 
 end # module
