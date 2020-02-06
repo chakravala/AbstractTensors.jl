@@ -41,6 +41,7 @@ Base.@pure isgraded(t) = false
 Base.@pure Manifold(::T) where T<:TensorAlgebra{V} where V = V
 Base.@pure Manifold(::T) where T<:TensorGraded{V} where V = V
 Base.@pure Manifold(V::T) where T<:Manifold = V
+Base.@pure Base.parent(V::T) where T<:TensorAlgebra = Manifold(V)
 
 import LinearAlgebra
 import LinearAlgebra: UniformScaling, I, rank
@@ -54,43 +55,29 @@ Dimensionality `n` of the `Manifold{n}` subspace representation.
 Base.@pure LinearAlgebra.rank(::M) where M<:Manifold{n} where n = n
 
 """
-    ndims(::TensorAlgebra)
+    ndims(t::TensorAlgebra)
 
-Dimensionality `n` of the psuedoscalar `Manifold{n}` of an element.
+Dimensionality of the psuedoscalar, `rank(Manifold(t))` of an element.
 """
-Base.@pure Base.ndims(::T) where T<:TensorAlgebra{M} where M = rank(M)
-Base.@pure Base.ndims(::T) where T<:TensorGraded{M} where M = rank(M)
-Base.@pure Base.ndims(M::T) where T<:Manifold = rank(M)
+Base.@pure Base.ndims(M::T) where T<:TensorAlgebra = rank(Manifold(M))
 
-"""
-    scalar(::TensorAlgebra)
+for (part,G) ∈ ((:scalar,0),(:vector,1),(:bivector,2))
+    ispart = Symbol(:is,part)
+    str = """
+    $part(::TensorAlgebra)
 
-Return the scalar (rank 0) part of any `TensorAlgebra` element.
-"""
-@inline scalar(t::T) where T<:TensorGraded{V} where V = zero(V)
-@inline scalar(t::T) where T<:TensorGraded{V,0} where V = t
-@inline isscalar(t::T) where T<:TensorGraded = rank(t) == 0 || iszero(t)
-
-"""
-    vector(::TensorAlgebra)
-
-Return the vector (rank 1) part of any `TensorAlgebra` element.
-"""
-@inline vector(t::T) where T<:TensorGraded{V} where V = zero(V)
-@inline vector(t::T) where T<:TensorGraded{V,1} where V = t
-@inline isvector(t::T) where T<:TensorGraded = rank(t) == 1 || iszero(t)
+Return the $part (rank $G) part of any `TensorAlgebra` element.
+    """
+    @eval begin
+        @doc $str $part
+        @inline $part(t::T) where T<:TensorGraded{V} where V = zero(V)
+        @inline $part(t::T) where T<:TensorGraded{V,$G} where V = t
+        @inline $ispart(t::T) where T<:TensorGraded = rank(t) == $G || iszero(t)
+    end
+end
 
 """
-    bivector(::TensorAlgebra)
-
-Return the bivector (rank 2) part of any `TensorAlgebra` element.
-"""
-@inline bivector(t::T) where T<:Manifold{2} = t
-@inline bivector(t::T) where T<:TensorGraded{V} where V = zero(V)
-@inline isbivector(t::T) where T<:TensorGraded = rank(t) == 2 || iszero(t)
-
-"""
-    volume(::TensorAlgebra)
+    pseudoscalar(::TensorAlgebra)
 
 Return the pseudoscalar (full rank) part of any `TensorAlgebra` element.
 """
@@ -123,7 +110,6 @@ end
 # universal vector space interopability, abstract tensor form evaluation, contraction
 
 for X ∈ TAG, Y ∈ TAG
-    Z = :({A<:$X{V},B<:$Y{V}})
     @eval begin
         @inline interop(op::Function,a::A,b::B) where {A<:$X{V},B<:$Y{V}} where V = op(a,b)
         @inline interform(a::A,b::B) where {A<:$X{V},B<:$Y{V}} where V = a(b)
@@ -148,7 +134,8 @@ end
 
 # extended compatibility interface
 
-export TensorAlgebra, Manifold, TensorGraded, istensor, isgraded, ismanifold, rank
+export TensorAlgebra, Manifold, TensorGraded, Distribution
+export istensor, isgraded, isdistribution, ismanifold, rank
 export scalar, isscalar, vector, isvector, bivector, isbivector, volume, isvolume
 export value, valuetype, interop, interform, involute, unit, even, odd, contraction
 export ⊘, ⊖, ⊗, ⊛, ⊙, ⊠, ×, ⨼, ⨽, ⋆, ∗, ⁻¹, ǂ, ₊, ₋, ˣ
