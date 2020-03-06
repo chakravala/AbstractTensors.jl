@@ -61,7 +61,7 @@ Dimensionality of the psuedoscalar, `rank(Manifold(t))` of an element.
 """
 Base.@pure Base.ndims(M::T) where T<:TensorAlgebra = rank(Manifold(M))
 
-for (part,G) ∈ ((:scalar,0),(:vector,1),(:bivector,2))
+for (part,G) ∈ ((:scalar,0),(:vector,1),(:bivector,2),(:trivector,3))
     ispart = Symbol(:is,part)
     str = """
     $part(::TensorAlgebra)
@@ -91,6 +91,7 @@ Return the pseudoscalar (full rank) part of any `TensorAlgebra` element.
 Returns the internal representation of a `TensorAlgebra` element value.
 """
 value(t::T) where T<:Number = t
+value(t::T) where T<:AbstractArray = t
 
 """
     valuetype(t::TensorAlgebra)
@@ -142,7 +143,7 @@ export ⊘, ⊖, ⊗, ⊛, ⊙, ⊠, ×, ⨼, ⨽, ⋆, ∗, ⁻¹, ǂ, ₊, ₋
 
 # some shared presets
 
-for op ∈ (:(Base.:+),:(Base.:-),:(Base.:*),:⊘,:⊗,:⊛,:∗,:⨼,:⨽,:(LinearAlgebra.dot),:(LinearAlgebra.cross),:contraction,:(Base.:|),:(Base.:(==)),:(Base.:<),:(Base.:>),:(Base.:<<),:(Base.:>>),:(Base.:>>>),:(Base.div),:(Base.rem),:(Base.:&))
+for op ∈ (:(Base.:+),:(Base.:-),:(Base.:*),:⊘,:⊗,:⊛,:∗,:⨼,:⨽,:contraction,:(LinearAlgebra.dot),:(Base.:|),:(Base.:(==)),:(Base.:<),:(Base.:>),:(Base.:<<),:(Base.:>>),:(Base.:>>>),:(Base.div),:(Base.rem),:(Base.:&))
     @eval begin
         @inline $op(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = interop($op,a,b)
         @inline $op(a::A,b::UniformScaling) where A<:TensorAlgebra = $op(a,Manifold(a)(b))
@@ -172,7 +173,7 @@ for op ∈ (:scalar,:involute,:even)
     @eval $op(t::T) where T<:Real = t
 end
 odd(::T) where T<:Real = 0
-LinearAlgebra.cross(t::T...) where T<:TensorAlgebra = ⋆(∧(t...))
+LinearAlgebra.cross(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = ⋆(∧(a,b))
 
 @inline Base.exp(t::T) where T<:TensorAlgebra = 1+Base.expm1(t)
 @inline Base.log(b,t::T) where T<:TensorAlgebra = Base.log(t)/Base.log(b)
