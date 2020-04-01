@@ -215,7 +215,7 @@ Base.cosc(t::T) where T<:TensorAlgebra = iszero(t) ? zero(Manifold(t)) : (x=(1π
 # absolute value norm
 
 @inline Base.abs(t::T) where T<:TensorAlgebra = Base.sqrt(Base.abs2(t))
-@inline Base.abs2(t::T) where T<:TensorAlgebra = t∗t
+@inline Base.abs2(t::T) where T<:TensorAlgebra = (a=t∗t; isscalar(a) ? scalar(a) : a)
 @inline Base.abs2(t::T) where T<:TensorGraded = contraction(t,t)
 @inline norm(z) = LinearAlgebra.norm(z)
 @inline LinearAlgebra.norm(t::T) where T<:TensorAlgebra = norm(value(t))
@@ -228,9 +228,9 @@ Base.cosc(t::T) where T<:TensorAlgebra = iszero(t) ? zero(Manifold(t)) : (x=(1π
 
 for id ∈ (:zero,:one)
     @eval begin
-        @inline Base.$id(t::T) where T<:TensorAlgebra = zero(Manifold(t))
-        @inline Base.$id(::Type{T}) where T<:TensorAlgebra{V} where V = zero(V)
-        @inline Base.$id(::Type{T}) where T<:TensorGraded{V} where V = zero(V)
+        @inline Base.$id(t::T) where T<:TensorAlgebra = $id(Manifold(t))
+        @inline Base.$id(::Type{T}) where T<:TensorAlgebra{V} where V = $id(V)
+        @inline Base.$id(::Type{T}) where T<:TensorGraded{V} where V = $id(V)
     end
 end
 
