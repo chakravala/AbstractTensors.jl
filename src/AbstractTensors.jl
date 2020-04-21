@@ -215,7 +215,7 @@ Base.cosc(t::T) where T<:TensorAlgebra = iszero(t) ? zero(Manifold(t)) : (x=(1π
 # absolute value norm
 
 @inline Base.abs(t::T) where T<:TensorAlgebra = Base.sqrt(Base.abs2(t))
-@inline Base.abs2(t::T) where T<:TensorAlgebra = (a=t∗t; isscalar(a) ? scalar(a) : a)
+@inline Base.abs2(t::T) where T<:TensorAlgebra = (a=t⋅t; isscalar(a) ? scalar(a) : a)
 @inline Base.abs2(t::T) where T<:TensorGraded = contraction(t,t)
 @inline norm(z) = LinearAlgebra.norm(z)
 @inline LinearAlgebra.norm(t::T) where T<:TensorAlgebra = norm(value(t))
