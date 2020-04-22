@@ -57,7 +57,7 @@ Base.@pure LinearAlgebra.rank(::M) where M<:Manifold{n} where n = n
 """
     ndims(t::TensorAlgebra)
 
-Dimensionality of the psuedoscalar, `rank(Manifold(t))` of an element.
+Dimensionality of the pseudoscalar, `rank(Manifold(t))` of an element.
 """
 Base.@pure Base.ndims(M::T) where T<:TensorAlgebra = rank(Manifold(M))
 
