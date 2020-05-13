@@ -151,8 +151,14 @@ for op ∈ (:(Base.:+),:(Base.:-),:(Base.:*),:⊘,:⊗,:⊛,:∗,:⨼,:⨽,:cont
     end
 end
 
+for op ∈ (:(Base.:!),:⋆)
+    for T ∈ (:Real,:Complex)
+        @eval @inline $op(t::T) where T<:$T = UniformScaling(t)
+    end
+end
+
 const ⊖ = *
-@inline ⋆(t::UniformScaling{T}) where T = T<:Bool ? (t.λ ? 1 : -1) : t.λ
+@inline Base.:!(t::UniformScaling{T}) where T = T<:Bool ? (t.λ ? 1 : 0) : t.λ
 @inline Base.:/(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = a*Base.inv(b)
 @inline Base.:/(a::UniformScaling,b::B) where B<:TensorAlgebra = Manifold(b)(a)*Base.inv(b)
 @inline Base.:/(a::A,b::UniformScaling) where A<:TensorAlgebra = a*Base.inv(Manifold(a)(b))
@@ -163,8 +169,8 @@ const ⊖ = *
 for op ∈ (:(Base.:+),:(Base.:*))
     @eval $op(t::T) where T<:TensorAlgebra = t
 end
-for op ∈ (:|,:!), T ∈ (TensorAlgebra,UniformScaling)
-    @eval Base.$op(t::$T) = ⋆(t)
+for T ∈ (TensorAlgebra,UniformScaling)
+    @eval Base.:|(t::$T) = !(t)
 end
 for op ∈ (:⊙,:⊠,:¬,:⋆)
     @eval function $op end
