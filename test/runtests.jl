@@ -38,7 +38,7 @@ op(a::UniformScaling,b::TensorAlgebra{V}) where V = op(V(a),b)
 @test Manifold(interform(a,a)) == ℝ
 
 ## algebraic tests
-@test !I == |(I)
+@test !I == 1
 @test (2)⁻¹ == 1/2
 @test (im)ǂ == -im
 @test (sqrt(2))ˣ == sqrt(2)
