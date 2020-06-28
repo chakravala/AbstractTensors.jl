@@ -38,10 +38,14 @@ Base.@pure isgraded(t) = false
 
 # parameters accessible from anywhere
 
-Base.@pure Manifold(::T) where T<:TensorAlgebra{V} where V = V
-Base.@pure Manifold(::T) where T<:TensorGraded{V} where V = V
-Base.@pure Manifold(V::T) where T<:Manifold = V
-Base.@pure Base.parent(V::T) where T<:TensorAlgebra = Manifold(V)
+for T ∈ (:T,:(Type{T}))
+    @eval begin
+        Base.@pure Manifold(::$T) where T<:TensorAlgebra{V} where V = V
+        Base.@pure Manifold(::$T) where T<:TensorGraded{V} where V = V
+        Base.@pure Manifold(V::$T) where T<:Manifold = V
+        Base.@pure Base.parent(V::$T) where T<:TensorAlgebra = Manifold(V)
+    end
+end
 
 import LinearAlgebra
 import LinearAlgebra: UniformScaling, I, rank
@@ -53,6 +57,7 @@ import AbstractLattices: ∧, ∨
 Dimensionality `n` of the `Manifold{n}` subspace representation.
 """
 Base.@pure LinearAlgebra.rank(::M) where M<:Manifold{n} where n = n
+Base.@pure LinearAlgebra.rank(::Type{M}) where M<:Manifold{n} where n = n
 
 """
     ndims(t::TensorAlgebra)
@@ -60,6 +65,7 @@ Base.@pure LinearAlgebra.rank(::M) where M<:Manifold{n} where n = n
 Dimensionality of the pseudoscalar, `rank(Manifold(t))` of an element.
 """
 Base.@pure Base.ndims(M::T) where T<:TensorAlgebra = rank(Manifold(M))
+Base.@pure Base.ndims(M::Type{T}) where T<:TensorAlgebra = rank(Manifold(M))
 
 for (part,G) ∈ ((:scalar,0),(:vector,1),(:bivector,2),(:trivector,3))
     ispart = Symbol(:is,part)
