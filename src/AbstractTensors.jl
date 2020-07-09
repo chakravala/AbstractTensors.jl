@@ -49,7 +49,6 @@ end
 
 import LinearAlgebra
 import LinearAlgebra: UniformScaling, I, rank
-import AbstractLattices: ∧, ∨
 
 """
     rank(::Manifold{n})
@@ -138,6 +137,13 @@ for X ∈ TAG, Y ∈ TAG
         @eval @inline $op(a::A,b::B) where {A<:$X{V},B<:$Y{V}} where V = contraction(a,b)
     end
 end
+
+# lattice defaults
+
+import AbstractLattices: ∧, ∨
+
+@inline ∧() = 1
+@inline ∨() = I
 
 # extended compatibility interface
 
