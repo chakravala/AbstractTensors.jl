@@ -66,6 +66,15 @@ Dimensionality of the pseudoscalar, `rank(Manifold(t))` of an element.
 Base.@pure Base.ndims(M::T) where T<:TensorAlgebra = rank(Manifold(M))
 Base.@pure Base.ndims(M::Type{T}) where T<:TensorAlgebra = rank(Manifold(M))
 
+"""
+    mdims(t::TensorAlgebra)
+
+Dimensionality of the pseudoscalar, `rank(Manifold(t))` of an element.
+"""
+Base.@pure mdims(M::T) where T<:TensorAlgebra = rank(Manifold(M))
+Base.@pure mdims(M::Type{T}) where T<:TensorAlgebra = rank(Manifold(M))
+Base.@pure mdims(M::Int) = M
+
 for (part,G) ∈ ((:scalar,0),(:vector,1),(:bivector,2),(:trivector,3))
     ispart = Symbol(:is,part)
     str = """
@@ -87,8 +96,8 @@ end
 Return the pseudoscalar (full rank) part of any `TensorAlgebra` element.
 """
 @inline volume(t::T) where T<:Manifold = t
-@inline volume(t::T) where T<:TensorGraded{V,G} where {V,G} = G == ndims(V) ? t : zero(V)
-@inline isvolume(t::T) where T<:TensorGraded = rank(t) == ndims(t) || iszero(t)
+@inline volume(t::T) where T<:TensorGraded{V,G} where {V,G} = G == mdims(V) ? t : zero(V)
+@inline isvolume(t::T) where T<:TensorGraded = rank(t) == mdims(t) || iszero(t)
 
 """
     value(::TensorAlgebra)
@@ -148,7 +157,7 @@ import AbstractLattices: ∧, ∨
 # extended compatibility interface
 
 export TensorAlgebra, Manifold, TensorGraded, Distribution
-export istensor, isgraded, isdistribution, ismanifold, rank
+export istensor, isgraded, isdistribution, ismanifold, rank, mdims
 export scalar, isscalar, vector, isvector, bivector, isbivector, volume, isvolume
 export value, valuetype, interop, interform, involute, unit, even, odd, contraction
 export ⊘, ⊖, ⊗, ⊛, ⊙, ⊠, ×, ⨼, ⨽, ⋆, ∗, ⁻¹, ǂ, ₊, ₋, ˣ

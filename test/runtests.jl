@@ -1,7 +1,7 @@
 using AbstractTensors
-using Test, LinearAlgebra
+using Test, LinearAlgebra, DirectSum
 
-#= example data
+# example data
 struct SpecialTensor{V} <: TensorAlgebra{V} end
 a,b = SpecialTensor{ℝ}(), SpecialTensor{ℝ'}()
 @test ndims(+(a)) == ndims(b)
@@ -37,7 +37,7 @@ op(a::UniformScaling,b::TensorAlgebra{V}) where V = op(V(a),b)
 @test Manifold(a(a)) == ℝ
 @test Manifold(interform(a,a)) == ℝ
 
-=## algebraic tests
+## algebraic tests
 @test !I == 1
 @test (2)⁻¹ == 1/2
 @test (im)ǂ == -im
