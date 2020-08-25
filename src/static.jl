@@ -665,8 +665,20 @@ Base.similar(::Type{A},::Type{T},n::Val) where {A<:AbstractArray,T} = mutable_si
 Base.similar(::Type{SA},::Type{T},n::Val) where {SA<:FixedVector,T} = sizedarray_similar_type(T,n)(undef)
 Base.similar(::Type{A},::Type{T},n::Val) where {A<:Array,T} = sizedarray_similar_type(T,n)(undef)
 
-# Use an Array for TupleVectors if we don't have a statically-known size
+# Support tuples of mixtures of `SOneTo`s alongside the normal `Integer` and `OneTo` options
+# by simply converting them to either a tuple of Ints or a Size, re-dispatching to either one
+# of the above methods (in the case of Size) or a base fallback (in the case of Ints).
+const HeterogeneousShape = Union{Integer, Base.OneTo, SOneTo}
+
+Base.similar(A::AbstractArray, ::Type{T}, shape::Tuple{HeterogeneousShape, Vararg{HeterogeneousShape}}) where {T} = similar(A, T, homogenize_shape(shape))
+Base.similar(::Type{A}, shape::Tuple{HeterogeneousShape, Vararg{HeterogeneousShape}}) where {A<:AbstractArray} = similar(A, homogenize_shape(shape))
+# Use an Array for StaticArrays if we don't have a statically-known size
 Base.similar(::Type{A}, shape::Tuple{Int, Vararg{Int}}) where {A<:TupleVector} = Array{eltype(A)}(undef, shape)
+
+homogenize_shape(::Tuple{}) = ()
+homogenize_shape(shape::Tuple{Vararg{SOneTo}}) = Val(prod(map(last, shape)))
+homogenize_shape(shape::Tuple{Vararg{HeterogeneousShape}}) = map(last, shape)
+
 
 @inline Base.copy(a::TupleVector) = typeof(a)(Tuple(a))
 @inline Base.copy(a::FixedVector) = typeof(a)(copy(a.v))
