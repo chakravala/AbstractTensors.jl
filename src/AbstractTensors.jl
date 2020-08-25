@@ -191,7 +191,7 @@ const ⊖ = *
 for op ∈ (:(Base.:+),:(Base.:*))
     @eval $op(t::T) where T<:TensorAlgebra = t
 end
-for op ∈ (:⊗,:⊙,:⊠,:¬,:⋆)
+for op ∈ (:⊗,:⊙,:⊠,:¬,:⋆,:clifford,:basis,:complementleft,:complementlefthodge)
     @eval function $op end
 end
 for op ∈ (:scalar,:involute,:even)
@@ -308,5 +308,7 @@ for (OP,op) ∈ ((:∏,:*),(:∑,:+))
 end
 
 const PROD,SUM,SUB = ∏,∑,-
+
+include("static.jl")
 
 end # module
