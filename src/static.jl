@@ -5,7 +5,6 @@
 import Base: @propagate_inbounds, @_inline_meta, @pure
 
 abstract type TupleVector{N,T} <: AbstractVector{T} end
-export TupleVector, Values, Variables, FixedVector
 
 @pure Base.length(::T) where T<:TupleVector{N} where N = N
 @pure Base.length(::Type{<:TupleVector{N}}) where N = N
@@ -319,7 +318,7 @@ end
     return val
 end
 
-@inline Tuple(v::Variables) = v.v
+@inline Base.Tuple(v::Variables) = v.v
 Base.dataids(ma::Variables) = (UInt(pointer(ma)),)
 
 @inline function Base.unsafe_convert(::Type{Ptr{T}}, a::Variables{N,T}) where {N,T}
@@ -504,7 +503,6 @@ broadcast_indices(A::TupleVector) = indices(A)
 @inline broadcast_sizes(a, as...) = (broadcast_size(a), broadcast_sizes(as...)...)
 @inline broadcast_sizes() = ()
 @inline broadcast_size(a) = Val(0)
-@inline broadcast_size(a::Base.RefValue{<:Values{N}}) where N = Val(N)
 @inline broadcast_size(a::AbstractVector) = Val(length(a))
 @inline broadcast_size(a::NTuple{N}) where N = Val(N)
 
@@ -536,7 +534,6 @@ scalar_getindex(x::Ref) = x[]
 
 @generated function _broadcast(f, ::Val{newsize}, s::Tuple{Vararg{Val}}, a...) where newsize
     first_staticarray = a[findfirst(ai -> ai <: Union{TupleVector, LinearAlgebra.Transpose{<:Any, <:TupleVector}, LinearAlgebra.Adjoint{<:Any, <:TupleVector}}, a)]
-
     if newsize == 0
         # Use inference to get eltype in empty case (see also comments in _map)
         eltys = [:(eltype(a[$i])) for i ∈ 1:length(a)]
@@ -546,7 +543,6 @@ scalar_getindex(x::Ref) = x[]
             @inbounds return similar_type($first_staticarray, T, Val(newsize))()
         end
     end
-
     sizes = [sz.parameters[1] for sz ∈ s.parameters]
     indices = CartesianIndices((newsize,))
     exprs = similar(indices, Expr)
@@ -557,7 +553,6 @@ scalar_getindex(x::Ref) = x[]
         ]
         exprs[j] = :(f($(exprs_vals...)))
     end
-
     return quote
         @_inline_meta
         @inbounds elements = tuple($(exprs...))
@@ -572,11 +567,6 @@ end
 @generated function _broadcast!(f, ::Val{newsize}, dest::AbstractArray, s::Tuple{Vararg{Val}}, as...) where {newsize}
     sizes = [sz.parameters[1] for sz ∈ s.parameters]
     sizes = tuple(sizes...)
-
-    # TODO: this could also be done outside the generated function:
-    sizematch(Val(newsize), Val(dest)) ||
-        throw(DimensionMismatch("Tried to broadcast to destination sized $newsize from inputs sized $sizes"))
-
     indices = CartesianIndices((newsize,))
     exprs = similar(indices, Expr)
     for (j, current_ind) ∈ enumerate(indices)
@@ -586,10 +576,8 @@ end
         ]
         exprs[j] = :(dest[$j] = f($(exprs_vals...)))
     end
-
     return quote
-        @_propagate_inbounds_meta
-        @boundscheck sizematch($(Val(newsize)), dest) || throw(DimensionMismatch("array could not be broadcast to match destination"))
+        Base.@_propagate_inbounds_meta
         @inbounds $(Expr(:block, exprs...))
         return dest
     end

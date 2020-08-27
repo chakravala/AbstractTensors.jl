@@ -20,6 +20,8 @@ This means that different packages can create tensor types having a common under
 
 Additionally, `TupleVector` is provided as a light weight alternative to [StaticArrays.jl](https://github.com/JuliaArrays/StaticArrays.jl).
 
+If the environment variable `STATICJL` is set, the `StaticArrays` package is depended upon.
+
 ## Interoperability
 
 Since `TensorBundle` choices are fundamental to `TensorAlgebra` operations, the universal interoperability between `TensorAlgebra{V}` elements with different associated `TensorBundle` choices is naturally realized by applying the `union` morphism to operations.

@@ -100,12 +100,13 @@ Return the pseudoscalar (full rank) part of any `TensorAlgebra` element.
 @inline isvolume(t::T) where T<:TensorGraded = rank(t) == mdims(t) || iszero(t)
 
 """
-    value(::TensorAlgebra)
+    values(::TensorAlgebra)
 
-Returns the internal representation of a `TensorAlgebra` element value.
+Returns the internal `Values` representation of a `TensorAlgebra` element.
 """
-value(t::T) where T<:Number = t
-value(t::T) where T<:AbstractArray = t
+values(t::T) where T<:Number = t
+values(t::T) where T<:AbstractArray = t
+const value = values
 
 """
     valuetype(t::TensorAlgebra)
@@ -157,7 +158,7 @@ import AbstractLattices: ∧, ∨
 # extended compatibility interface
 
 export TensorAlgebra, Manifold, TensorGraded, Distribution
-export istensor, isgraded, isdistribution, ismanifold, rank, mdims
+export istensor, isgraded, isdistribution, ismanifold, rank, mdims, values
 export scalar, isscalar, vector, isvector, bivector, isbivector, volume, isvolume
 export value, valuetype, interop, interform, involute, unit, even, odd, contraction
 export ⊘, ⊖, ⊗, ⊛, ⊙, ⊠, ×, ⨼, ⨽, ⋆, ∗, ⁻¹, ǂ, ₊, ₋, ˣ
@@ -309,6 +310,13 @@ end
 
 const PROD,SUM,SUB = ∏,∑,-
 
-include("static.jl")
+export TupleVector, Values, Variables, FixedVector
+
+if haskey(ENV,"STATICJL")
+    import StaticArrays: SVector, MVector, SizedVector, StaticVector
+    const Values,Variables,FixedVector,TupleVector = SVector,MVector,SizedVector,StaticVector
+else
+    include("static.jl")
+end
 
 end # module
