@@ -16,6 +16,107 @@ abstract type TupleVector{N,T} <: AbstractVector{T} end
 
 Base.IndexStyle(::Type{T}) where {T<:TupleVector} = IndexLinear()
 
+
+################################
+## Non-scalar linear indexing ##
+################################
+
+@inline function Base.getindex(a::TupleVector{N}, ::Colon) where N
+    _getindex(a::TupleVector, Val(N), :)
+end
+
+@generated function _getindex(a::TupleVector, s::Val{N}, ::Colon) where N
+    exprs = [:(a[$i]) for i = 1:N]
+    return quote
+        @_inline_meta
+        @inbounds return similar_type(a,s)(tuple($(exprs...)))
+    end
+end
+
+@propagate_inbounds function Base.getindex(a::TupleVector, inds::TupleVector{N,Int}) where N
+    _getindex(a, Val(N), inds)
+end
+
+@generated function _getindex(a::TupleVector, s::Val{N}, inds::TupleVector{N, Int}) where N
+    exprs = [:(a[inds[$i]]) for i = 1:N]
+    return quote
+        Base.@_propagate_inbounds_meta
+        similar_type(a, s)(tuple($(exprs...)))
+    end
+end
+
+@inline function Base.setindex!(a::TupleVector{N}, v, ::Colon) where N
+    _setindex!(a::TupleVector, v, Val(N), :)
+    return v
+end
+
+@generated function _setindex!(a::TupleVector, v, ::Val{L}, ::Colon) where {L}
+    exprs = [:(a[$i] = v) for i = 1:L]
+    return quote
+        @_inline_meta
+        @inbounds $(Expr(:block, exprs...))
+    end
+end
+
+@generated function _setindex!(a::TupleVector, v::AbstractVector, ::Val{L}, ::Colon) where {L}
+    exprs = [:(a[$i] = v[$i]) for i = 1:L]
+    return quote
+        Base.@_propagate_inbounds_meta
+        @boundscheck if length(v) != L
+            throw(DimensionMismatch("tried to assign $(length(v))-element array to length-$L destination"))
+        end
+        @inbounds $(Expr(:block, exprs...))
+    end
+end
+
+@generated function _setindex!(a::TupleVector, v::TupleVector{M}, ::Val{L}, ::Colon) where {M,L}
+    exprs = [:(a[$i] = v[$i]) for i = 1:L]
+    return quote
+        Base.@_propagate_inbounds_meta
+        @boundscheck if M != L
+            throw(DimensionMismatch("tried to assign $M-element array to length-$L destination"))
+        end
+        $(Expr(:block, exprs...))
+    end
+end
+
+@propagate_inbounds function Base.setindex!(a::TupleVector, v, inds::TupleVector{N,Int}) where N
+    _setindex!(a, v, Val(N), inds)
+    return v
+end
+
+@generated function _setindex!(a::TupleVector, v, ::Val{N}, inds::TupleVector{N,Int}) where N
+    exprs = [:(a[inds[$i]] = v) for i = 1:N]
+    return quote
+        Base.@_propagate_inbounds_meta
+        similar_type(a, s)(tuple($(exprs...)))
+    end
+end
+
+@generated function _setindex!(a::TupleVector, v::AbstractVector, ::Val{N}, inds::TupleVector{N,Int}) where N
+    exprs = [:(a[inds[$i]] = v[$i]) for i = 1:N]
+    return quote
+        Base.@_propagate_inbounds_meta
+        @boundscheck if length(v) != $N
+            throw(DimensionMismatch("tried to assign $(length(v))-element array to length-$N destination"))
+        end
+        $(Expr(:block, exprs...))
+    end
+end
+
+@generated function _setindex!(a::TupleVector, v::TupleVector{M}, ::Val{N}, inds::TupleVector{N,Int}) where {N,M}
+    exprs = [:(a[inds[$i]] = v[$i]) for i = 1:N]
+    return quote
+        Base.@_propagate_inbounds_meta
+        @boundscheck if M != N
+            throw(DimensionMismatch("tried to assign $M-element array to length-$N destination"))
+        end
+        $(Expr(:block, exprs...))
+    end
+end
+
+# generators
+
 @inline Base.zero(a::SA) where {SA<:TupleVector} = zeros(SA)
 @inline Base.zero(a::Type{SA}) where {SA<:TupleVector} = zeros(SA)
 
@@ -32,7 +133,7 @@ Base.IndexStyle(::Type{T}) where {T<:TupleVector} = IndexLinear()
     end
 end
 
-@inline Base.ones(::Type{SA}) where {SA<:TupleVector} = _ones(Val(N), SA)
+@inline Base.ones(::Type{SA}) where {SA<:TupleVector{N}} where N = _ones(Val(N), SA)
 @generated function _ones(::Val{N}, ::Type{SA}) where SA<:TupleVector{N} where N
     T = eltype(SA)
     if T == Any
@@ -164,7 +265,7 @@ end
 # conversion
 
 (::Type{SA})(x::Tuple{Tuple{Tuple{<:Tuple}}}) where {SA <: TupleVector} =
-    throw(DimensionMismatch("No precise constructor for $SA found. Length of input was $(length(x[1][1][1]))."))
+    throw(DimensionMismatch("No precise constructor for $SA found. Val of input was $(length(x[1][1][1]))."))
 
 @inline (::Type{SA})(x...) where {SA <: TupleVector} = SA(x)
 @inline (::Type{SA})(a::TupleVector) where {SA<:TupleVector} = SA(Tuple(a))
@@ -481,7 +582,7 @@ end
     flat = Broadcast.flatten(B); as = flat.args; f = flat.f
     argsizes = broadcast_sizes(as...)
     destsize = combine_sizes((Val(M), argsizes...))
-    #=if Length(destsize) === Length{Dynamic()}()
+    #=if Val(destsize) === Val{Dynamic()}()
         # destination dimension cannot be determined statically; fall back to generic broadcast!
         return copyto!(dest, convert(Broadcasted{DefaultArrayStyle{M}}, B))
     end=#
@@ -585,8 +686,6 @@ end
 
 # Other
 
-const SVector,MVector,SizedVector = Values,Variables,FixedVector # deprecate
-
 Base.axes(::TupleVector{N}) where N = _axes(Val(N))
 @pure function _axes(::Val{sizes}) where {sizes}
     map(SOneTo, (sizes,))
@@ -654,13 +753,13 @@ Base.similar(::Type{SA},::Type{T},n::Val) where {SA<:FixedVector,T} = sizedarray
 Base.similar(::Type{A},::Type{T},n::Val) where {A<:Array,T} = sizedarray_similar_type(T,n)(undef)
 
 # Support tuples of mixtures of `SOneTo`s alongside the normal `Integer` and `OneTo` options
-# by simply converting them to either a tuple of Ints or a Size, re-dispatching to either one
-# of the above methods (in the case of Size) or a base fallback (in the case of Ints).
+# by simply converting them to either a tuple of Ints or a Val, re-dispatching to either one
+# of the above methods (in the case of Val) or a base fallback (in the case of Ints).
 const HeterogeneousShape = Union{Integer, Base.OneTo, SOneTo}
 
 Base.similar(A::AbstractArray, ::Type{T}, shape::Tuple{HeterogeneousShape, Vararg{HeterogeneousShape}}) where {T} = similar(A, T, homogenize_shape(shape))
 Base.similar(::Type{A}, shape::Tuple{HeterogeneousShape, Vararg{HeterogeneousShape}}) where {A<:AbstractArray} = similar(A, homogenize_shape(shape))
-# Use an Array for StaticArrays if we don't have a statically-known size
+# Use an Array for TupleVectors if we don't have a statically-known size
 Base.similar(::Type{A}, shape::Tuple{Int, Vararg{Int}}) where {A<:TupleVector} = Array{eltype(A)}(undef, shape)
 
 homogenize_shape(::Tuple{}) = ()

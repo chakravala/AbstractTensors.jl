@@ -317,6 +317,7 @@ if haskey(ENV,"STATICJL")
     const Values,Variables,FixedVector,TupleVector = SVector,MVector,SizedVector,StaticVector
 else
     include("static.jl")
+    const SVector,MVector,SizedVector = Values,Variables,FixedVector
 end
 
 end # module
