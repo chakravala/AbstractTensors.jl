@@ -336,6 +336,27 @@ end
     end
 end
 
+# Diff is slightly different
+@inline LinearAlgebra.diff(a::TupleVector{N}; dims=Val(1)) where N = _diff(Val(N),a,dims)
+
+@inline function _diff(sz::Val, a::TupleVector, D::Int)
+    _diff(sz,a,Val(D))
+end
+@generated function _diff(::Val{N}, a::TupleVector, ::Val{1}) where N
+    Snew = N-1
+    exprs = Array{Expr}(undef, Snew)
+    for i1 = Base.product(1:Snew)
+        i2 = copy([i1...])
+        i2[1] = i1[1] + 1
+        exprs[i1...] = :(a[$(i2...)] - a[$(i1...)])
+    end
+    return quote
+        @_inline_meta
+        elements = tuple($(exprs...))
+        @inbounds return similar_type(a, eltype(elements), Val($Snew))(elements)
+    end
+end
+
 # Values
 
 struct Values{N,T} <: TupleVector{N,T}
