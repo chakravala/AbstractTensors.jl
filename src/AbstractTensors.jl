@@ -4,7 +4,7 @@
 
 module AbstractTensors
 
-# universal root Tensor type
+# universal root Tensor type, Manifold
 
 """
     TensorAlgebra{V} <: Number
@@ -15,26 +15,42 @@ abstract type TensorAlgebra{V} <: Number end
 Base.@pure istensor(t::T) where T<:TensorAlgebra = true
 Base.@pure istensor(t) = false
 
-## Manifold{n}
-
 """
-    Manifold{n} <: TensorAlgebra
+    Manifold{V} <: TensorAlgebra{V}
 
 Basis parametrization locally homeomorphic to `ℝ^n` product topology.
 """
-abstract type Manifold{n} <: TensorAlgebra{n} end
+abstract type Manifold{V} <: TensorAlgebra{V} end
 Base.@pure ismanifold(t::T) where T<:Manifold = true
 Base.@pure ismanifold(t) = false
 
 """
-    TensorGraded{V,n} <: Manifold{n} <: TensorAlgebra
+    TensorGraded{V,G} <: Manifold{V} <: TensorAlgebra
 
 Graded elements of a `TensorAlgebra` in a `Manifold` topology.
 """
-abstract type TensorGraded{V,G} <: Manifold{G} end
+abstract type TensorGraded{V,G} <: Manifold{V} end
 const TAG = (:TensorAlgebra,:TensorGraded)
 Base.@pure isgraded(t::T) where T<:TensorGraded = true
 Base.@pure isgraded(t) = false
+
+"""
+    TensorTerm{V,G} <: TensorGraded{V,G}
+
+Terms of a `TensorAlgebra` having a single coefficient.
+"""
+abstract type TensorTerm{V,G} <: TensorGraded{V,G} end
+Base.@pure isterm(t::T) where T<:TensorTerm = true
+Base.@pure isterm(t) = false
+
+"""
+    TensorMixed{V} <: TensorAlgebra{V}
+
+Elements of `TensorAlgebra` having non-homogenous grade.
+"""
+abstract type TensorMixed{V} <: TensorAlgebra{V} end
+Base.@pure ismixed(t::T) where T<:TensorMixed = true
+Base.@pure ismixed(t) = false
 
 # parameters accessible from anywhere
 
@@ -53,26 +69,18 @@ import LinearAlgebra: UniformScaling, I, rank
 """
     rank(::Manifold{n})
 
-Dimensionality `n` of the `Manifold{n}` subspace representation.
+Dimensionality `n` of the `Manifold` subspace representation.
 """
-Base.@pure LinearAlgebra.rank(::M) where M<:Manifold{n} where n = n
-Base.@pure LinearAlgebra.rank(::Type{M}) where M<:Manifold{n} where n = n
+Base.@pure LinearAlgebra.rank(::T) where T<:TensorGraded{V,G} where {V,G} = G
+Base.@pure LinearAlgebra.rank(::Type{M}) where M<:Manifold = mdims(M)
 
 """
-    ndims(t::TensorAlgebra)
+    mdims(t::TensorAlgebra{V})
 
-Dimensionality of the pseudoscalar, `rank(Manifold(t))` of an element.
+Dimensionality of the pseudoscalar `V` of that `TensorAlgebra`.
 """
-Base.@pure Base.ndims(M::T) where T<:TensorAlgebra = rank(Manifold(M))
-Base.@pure Base.ndims(M::Type{T}) where T<:TensorAlgebra = rank(Manifold(M))
-
-"""
-    mdims(t::TensorAlgebra)
-
-Dimensionality of the pseudoscalar, `rank(Manifold(t))` of an element.
-"""
-Base.@pure mdims(M::T) where T<:TensorAlgebra = rank(Manifold(M))
-Base.@pure mdims(M::Type{T}) where T<:TensorAlgebra = rank(Manifold(M))
+Base.@pure mdims(M::T) where T<:TensorAlgebra = mdims(Manifold(M))
+Base.@pure mdims(M::Type{T}) where T<:TensorAlgebra = mdims(Manifold(M))
 Base.@pure mdims(M::Int) = M
 
 for (part,G) ∈ ((:scalar,0),(:vector,1),(:bivector,2),(:trivector,3))
@@ -113,7 +121,8 @@ const value = values
 
 Returns type of a `TensorAlgebra` element value's internal representation.
 """
-valuetype(::T) where T<:Number = T
+Base.@pure valuetype(::T) where T<:Number = T
+#Base.@pure valuetype(::T) where T<:TensorAlgebra{V,𝕂} where V where 𝕂 = 𝕂
 
 function Base.isapprox(a::S,b::T) where {S<:TensorAlgebra,T<:TensorAlgebra}
     rtol = Base.rtoldefault(valuetype(a), valuetype(b), 0)
@@ -158,7 +167,7 @@ import AbstractLattices: ∧, ∨
 # extended compatibility interface
 
 export TensorAlgebra, Manifold, TensorGraded, Distribution
-export istensor, isgraded, isdistribution, ismanifold, rank, mdims, values
+export istensor, ismanifold, isterm, isgraded, ismixed, rank, mdims, values
 export scalar, isscalar, vector, isvector, bivector, isbivector, volume, isvolume
 export value, valuetype, interop, interform, involute, unit, even, odd, contraction
 export ⊘, ⊖, ⊗, ⊛, ⊙, ⊠, ×, ⨼, ⨽, ⋆, ∗, ⁻¹, ǂ, ₊, ₋, ˣ
@@ -248,7 +257,6 @@ Base.cosc(t::T) where T<:TensorAlgebra = iszero(t) ? zero(Manifold(t)) : (x=(1π
 @inline unit(t::T) where T<:TensorAlgebra = Base.:/(t,Base.abs(t))
 @inline Base.iszero(t::T) where T<:TensorAlgebra = LinearAlgebra.norm(t) ≈ 0
 @inline Base.isone(t::T) where T<:TensorAlgebra = LinearAlgebra.norm(t)≈value(scalar(t))≈1
-@inline contraction(a::A,b::B) where {A<:TensorGraded,B<:TensorGraded} = contraction(a,b)
 
 # identity elements
 
