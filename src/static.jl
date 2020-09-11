@@ -283,7 +283,7 @@ Base.AbstractArray{T}(sa::TupleVector{N,U}) where {N,T,U} = similar_type(typeof(
 Base.AbstractArray{T,1}(sa::TupleVector{N,U}) where {N,T,U} = similar_type(typeof(sa),T,Val(N))(sa)
 
 # Constructing a Tuple from a TupleVector
-@inline Base.Tuple(a::TupleVector) = unroll_tuple(a, Val(a))
+@inline Base.Tuple(a::TupleVector{N}) where N = unroll_tuple(a, Val(N))
 
 @noinline function dimension_mismatch_fail(SA::Type, a::AbstractArray)
     throw(DimensionMismatch("expected input array of length $(length(SA)), got length $(length(a))"))

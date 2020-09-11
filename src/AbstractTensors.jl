@@ -257,6 +257,7 @@ Base.cosc(t::T) where T<:TensorAlgebra = iszero(t) ? zero(Manifold(t)) : (x=(1π
 @inline unit(t::T) where T<:TensorAlgebra = Base.:/(t,Base.abs(t))
 @inline Base.iszero(t::T) where T<:TensorAlgebra = LinearAlgebra.norm(t) ≈ 0
 @inline Base.isone(t::T) where T<:TensorAlgebra = LinearAlgebra.norm(t)≈value(scalar(t))≈1
+@inline LinearAlgebra.dot(a::A,b::B) where {A<:TensorGraded,B<:TensorGraded} = contraction(a,b)
 
 # identity elements
 
@@ -316,7 +317,7 @@ for (OP,op) ∈ ((:∏,:*),(:∑,:+))
     end
 end
 
-const PROD,SUM,SUB = ∏,∑,-
+const PROD,SUM,SUB,√ = ∏,∑,-,sqrt
 
 export TupleVector, Values, Variables, FixedVector
 
