@@ -801,24 +801,39 @@ end
 # Vector space algebra
 
 # Unary ops
-@inline Base.:-(a::TupleVector) = map(Base.:-, a)
+@inline Base.:-(a::TupleVector) = map(-, a)
+@inline Base.:-(a::TupleVector{n,<:Number}) where n = map(Base.:-, a)
 
 # Binary ops
 # Between arrays
-@inline Base.:+(a::TupleVector, b::TupleVector) = map(Base.:+, a, b)
-@inline Base.:+(a::AbstractArray, b::TupleVector) = map(Base.:+, a, b)
-@inline Base.:+(a::TupleVector, b::AbstractArray) = map(Base.:+, a, b)
+@inline Base.:+(a::TupleVector, b::TupleVector) = map(∑, a, b)
+@inline Base.:+(a::AbstractArray, b::TupleVector) = map(∑, a, b)
+@inline Base.:+(a::TupleVector, b::AbstractArray) = map(∑, a, b)
 
-@inline Base.:-(a::TupleVector, b::TupleVector) = map(Base.:-, a, b)
-@inline Base.:-(a::AbstractArray, b::TupleVector) = map(Base.:-, a, b)
-@inline Base.:-(a::TupleVector, b::AbstractArray) = map(Base.:-, a, b)
+@inline Base.:+(a::TupleVector{n,<:Number}, b::TupleVector{n,<:Number}) where n = map(Base.:+, a, b)
+@inline Base.:+(a::AbstractArray{<:Number}, b::TupleVector{n,<:Number}) where n = map(Base.:+, a, b)
+@inline Base.:+(a::TupleVector{n,<:Number}, b::AbstractArray{<:Number}) where n = map(Base.:+, a, b)
+
+@inline Base.:-(a::TupleVector, b::TupleVector) = map(-, a, b)
+@inline Base.:-(a::AbstractArray, b::TupleVector) = map(-, a, b)
+@inline Base.:-(a::TupleVector, b::AbstractArray) = map(-, a, b)
+
+@inline Base.:-(a::TupleVector{n,<:Number}, b::TupleVector{n,<:Number}) where n = map(Base.:-, a, b)
+@inline Base.:-(a::AbstractArray{<:Number}, b::TupleVector{n,<:Number}) where n = map(Base.:-, a, b)
+@inline Base.:-(a::TupleVector{n,<:Number}, b::AbstractArray{<:Number}) where n = map(Base.:-, a, b)
 
 # Scalar-array
-@inline Base.:*(a::Number, b::TupleVector) = broadcast(Base.:*, a, b)
-@inline Base.:*(a::TupleVector, b::Number) = broadcast(Base.:*, a, b)
+@inline Base.:*(a::Number, b::TupleVector{n,<:Number}) where n = broadcast(Base.:*, a, b)
+@inline Base.:*(a::TupleVector{n,<:Number}, b::Number) where n = broadcast(Base.:*, a, b)
 
-@inline Base.:/(a::TupleVector, b::Number) = broadcast(Base.:/, a, b)
-@inline Base.:\(a::Number, b::TupleVector) = broadcast(Base.:\, a, b)
+@inline Base.:*(a, b::TupleVector) = broadcast(∏, a, b)
+@inline Base.:*(a::TupleVector, b) = broadcast(∏, a, b)
+
+@inline Base.:/(a::TupleVector{n,<:Number}, b::Number) where n = broadcast(Base.:/, a, b)
+@inline Base.:\(a::Number, b::TupleVector{n,<:Number}) where n = broadcast(Base.:\, a, b)
+
+@inline Base.:/(a::TupleVector, b) = broadcast(/, a, b)
+@inline Base.:\(a, b::TupleVector) = broadcast(\, a, b)
 
 #--------------------------------------------------
 # Vector products
@@ -863,17 +878,18 @@ end
 _norm_p0(x) = x == 0 ? zero(x) : one(x)
 
 @inline LinearAlgebra.norm(a::TupleVector, p::Real) = _norm(a, p)
-@generated function _norm(a::TupleVector{S}, p::Real) where S
+@generated function _norm(a::TupleVector{S,T}, p::Real) where {S,T}
     if S == 0
         return :(zero(real(eltype(a))))
     end
-    expr = :(Base.abs(a[1])^p)
+    fun = T<:Number ? :(Base.abs) : :abs
+    expr = :($fun(a[1])^p)
     for j = 2:S
-        expr = :($expr + Base.abs(a[$j])^p)
+        expr = :($expr + $fun(a[$j])^p)
     end
-    expr_p1 = :(abs(a[1]))
+    expr_p1 = :($fun(a[1]))
     for j = 2:S
-        expr_p1 = :($expr_p1 + Base.abs(a[$j]))
+        expr_p1 = :($expr_p1 + $fun(a[$j]))
     end
     return quote
         $(Expr(:meta, :inline))
@@ -882,17 +898,23 @@ _norm_p0(x) = x == 0 ? zero(x) : one(x)
         elseif p == 1
             @inbounds return $expr_p1
         elseif p == 2
-            return norm(a)
+            return LinearAlgebra.norm(a)
         elseif p == 0
-            return mapreduce(_norm_p0, Base.:+, a)
+            return mapreduce(_norm_p0, $(T<:Number ? :(Base.:+) : :∑), a)
         else
-            @inbounds return Base.:^($expr,Base.inv(p))
+            @inbounds return $(T<:Number ? :(Base.:^) : :^)($expr,$(T<:Number ? :(Base.inv) : :inv)(p))
         end
     end
 end
 
-@inline LinearAlgebra.normalize(a::TupleVector) = Base.:*(Base.inv(LinearAlgebra.norm(a)),a)
-@inline LinearAlgebra.normalize(a::TupleVector, p::Real) = Base.:*(Base.inv(LinearAlgebra.norm(a, p)),a)
+@inline LinearAlgebra.normalize(a::TupleVector) = ∏(inv(LinearAlgebra.norm(a)),a)
+@inline LinearAlgebra.normalize(a::TupleVector, p::Real) = ∏(inv(LinearAlgebra.norm(a, p)),a)
 
-@inline LinearAlgebra.normalize!(a::TupleVector) = (a .*= Base.inv(LinearAlgebra.norm(a)); return a)
-@inline LinearAlgebra.normalize!(a::TupleVector, p::Real) = (a .*= Base.inv(LinearAlgebra.norm(a, p)); return a)
+@inline LinearAlgebra.normalize!(a::TupleVector) = (a .*= inv(LinearAlgebra.norm(a)); return a)
+@inline LinearAlgebra.normalize!(a::TupleVector, p::Real) = (a .*= inv(LinearAlgebra.norm(a, p)); return a)
+
+@inline LinearAlgebra.normalize(a::TupleVector{n,<:Number}) where n = Base.:*(Base.inv(LinearAlgebra.norm(a)),a)
+@inline LinearAlgebra.normalize(a::TupleVector{n,<:Number}, p::Real) where n = Base.:*(Base.inv(LinearAlgebra.norm(a, p)),a)
+
+@inline LinearAlgebra.normalize!(a::TupleVector{n,<:Number}) where n = (a .*= Base.inv(LinearAlgebra.norm(a)); return a)
+@inline LinearAlgebra.normalize!(a::TupleVector{n,<:Number}, p::Real) where n = (a .*= Base.inv(LinearAlgebra.norm(a, p)); return a)
