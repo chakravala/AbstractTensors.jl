@@ -322,7 +322,7 @@ const PROD,SUM,SUB,√ = ∏,∑,-,sqrt
 export TupleVector, Values, Variables, FixedVector
 
 if haskey(ENV,"STATICJL")
-    import StaticArrays: SVector, MVector, SizedVector, StaticVector
+    import StaticArrays: SVector, MVector, SizedVector, StaticVector, _diff
     const Values,Variables,FixedVector,TupleVector = SVector,MVector,SizedVector,StaticVector
 else
     include("static.jl")
