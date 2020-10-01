@@ -197,11 +197,16 @@ const ⊖ = *
 @inline Base.:\(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = Base.inv(a)*b
 @inline Base.:\(a::UniformScaling,b::B) where B<:TensorAlgebra = Base.inv(Manifold(b)(a))*b
 @inline Base.:\(a::A,b::UniformScaling) where A<:TensorAlgebra = Base.inv(a)*Manifold(a)(b)
+@inline ⊗(a::A,b::B) where {A<:TensorAlgebra,B<:Real} = a*b
+@inline ⊗(a::A,b::B) where {A<:TensorAlgebra,B<:Complex} = a*b
+@inline ⊗(a::A,b::B) where {A<:Real,B<:TensorAlgebra} = a*b
+@inline ⊗(a::A,b::B) where {A<:Complex,B<:TensorAlgebra} = a*b
+Base.:∘(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = contraction(a,b)
 
 for op ∈ (:(Base.:+),:(Base.:*))
     @eval $op(t::T) where T<:TensorAlgebra = t
 end
-for op ∈ (:⊗,:⊙,:⊠,:¬,:⋆,:clifford,:basis,:complementleft,:complementlefthodge)
+for op ∈ (:⊙,:⊠,:¬,:⋆,:clifford,:basis,:complementleft,:complementlefthodge)
     @eval function $op end
 end
 for op ∈ (:scalar,:involute,:even)
@@ -293,6 +298,7 @@ signbit(x::Symbol) = false
 signbit(x::Expr) = x.head == :call && x.args[1] == :-
 -(x) = Base.:-(x)
 -(x::Symbol) = :(-$x)
+@inline dot(x,y) = LinearAlgebra.dot(x,y)
 
 for op ∈ (:conj,:inv,:sqrt,:abs,:exp,:expm1,:log,:log1p,:sin,:cos,:sinh,:cosh,:signbit)
     @eval @inline $op(z) = Base.$op(z)
