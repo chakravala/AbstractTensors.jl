@@ -124,12 +124,19 @@ Returns type of a `TensorAlgebra` element value's internal representation.
 Base.@pure valuetype(::T) where T<:Number = T
 #Base.@pure valuetype(::T) where T<:TensorAlgebra{V,𝕂} where V where 𝕂 = 𝕂
 
-function Base.isapprox(a::S,b::T) where {S<:TensorAlgebra,T<:TensorAlgebra}
-    rtol = Base.rtoldefault(valuetype(a), valuetype(b), 0)
-    LinearAlgebra.norm(Base.:-(a,b))≤rtol*max(LinearAlgebra.norm(a),LinearAlgebra.norm(b))
+Base.real(::Type{T}) where T<:TensorAlgebra = real(valuetype(T))
+Base.rtoldefault(::Type{T}) where T<:TensorAlgebra = Base.rtoldefault(valuetype(T))
+function Base.isapprox(a::S,b::T;atol::Real=0,rtol::Real=Base.rtoldefault(a,b,atol),nans::Bool=false,norm::Function=LinearAlgebra.norm) where {S<:TensorAlgebra,T<:TensorAlgebra}
+    x,y = norm(a),norm(b)
+    (isfinite(x) && isfinite(y) && norm(Base.:-(a,b))≤max(atol,rtol*max(x,y))) || (nans && isnan(x) && isnan(y))
 end
-function Base.isapprox(a::S,b::T) where {S<:TensorGraded,T<:TensorGraded}
-    Manifold(a)==Manifold(b) && (rank(a)==rank(b) ? AbstractTensors.:≈(norm(a),norm(b)) : (isnull(a) && isnull(b)))
+function Base.isapprox(a::S,b::T;atol::Real=0,rtol::Real=Base.rtoldefault(a,b,atol),nans::Bool=false,norm::Function=LinearAlgebra.norm) where {S<:TensorGraded,T<:TensorGraded}
+    Manifold(a)==Manifold(b) && if rank(a)==rank(b)
+        x,y = norm(a),norm(b)
+        (isfinite(x) && isfinite(y) && norm(Base.:-(a,b))≤max(atol,rtol*max(x,y))) || (nans && isnan(x) && isnan(y))
+    else
+        isnull(a) && isnull(b)
+    end
 end
 
 # universal vector space interopability, abstract tensor form evaluation, contraction
