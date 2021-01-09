@@ -1,0 +1,59 @@
+
+struct SOneTo{n} <: AbstractUnitRange{Int} end
+
+@pure SOneTo(n::Int) = SOneTo{n}()
+function SOneTo{n}(r::AbstractUnitRange) where n
+    ((first(r) == 1) & (last(r) == n)) && return SOneTo{n}()
+
+    errmsg(r) = throw(DimensionMismatch("$r is inconsistent with SOneTo{$n}")) # avoid GC frame
+    errmsg(r)
+end
+Base.Tuple(::SOneTo{N}) where N = ntuple(identity, Val(N))
+
+@pure Base.axes(s::SOneTo) = (s,)
+@pure Base.size(s::SOneTo{n}) where n = (n,)
+@pure Base.length(s::SOneTo{n}) where n = n
+
+# The axes of a Slice'd SOneTo use the SOneTo itself
+Base.axes(S::Base.Slice{<:SOneTo}) = (S.indices,)
+Base.unsafe_indices(S::Base.Slice{<:SOneTo}) = (S.indices,)
+Base.axes1(S::Base.Slice{<:SOneTo}) = S.indices
+
+@propagate_inbounds function Base.getindex(s::SOneTo, i::Int)
+    @boundscheck checkbounds(s, i)
+    return i
+end
+@propagate_inbounds function Base.getindex(s::SOneTo, s2::SOneTo)
+    @boundscheck checkbounds(s, s2)
+    return s2
+end
+
+@pure Base.first(::SOneTo) = 1
+@pure Base.last(::SOneTo{n}) where n = n::Int
+@pure Base.iterate(::SOneTo{n}) where n = n::Int < 1 ? nothing : (1, 1)
+@pure function Base.iterate(::SOneTo{n}, s::Int) where {n}
+    if s < n::Int
+        s2 = s + 1
+        return (s2, s2)
+    else
+        return nothing
+    end
+end
+
+function Base.getproperty(::SOneTo{n}, s::Symbol) where {n}
+    if s === :start
+        return 1
+    elseif s === :stop
+        return n::Int
+    else
+        error("type SOneTo has no property $s")
+    end
+end
+
+Base.show(io::IO, ::SOneTo{n}) where {n} = print(io, "SOneTo(", n::Int, ")")
+Base.@pure function Base.checkindex(::Type{Bool}, ::SOneTo{n1}, ::SOneTo{n2}) where {n1, n2}
+    return n1::Int >= n2::Int
+end
+
+Base.promote_rule(a::Type{Base.OneTo{T}}, ::Type{SOneTo{n}}) where {T,n} =
+    Base.OneTo{promote_type(T, Int)}
