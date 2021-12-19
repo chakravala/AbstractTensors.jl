@@ -1,4 +1,7 @@
 
+# This file is adapted from JuliaArrays/StaticArrays.jl License is MIT:
+# https://github.com/JuliaArrays/StaticArrays.jl/blob/master/LICENSE.md
+
 import Base.Broadcast: BroadcastStyle, AbstractArrayStyle, Broadcasted, DefaultArrayStyle, materialize!
 import Base.Broadcast: _bcs1  # for SOneTo axis information
 using Base.Broadcast: _bcsm

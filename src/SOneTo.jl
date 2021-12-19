@@ -1,4 +1,7 @@
 
+# This file is adapted from JuliaArrays/StaticArrays.jl License is MIT:
+# https://github.com/JuliaArrays/StaticArrays.jl/blob/master/LICENSE.md
+
 struct SOneTo{n} <: AbstractUnitRange{Int} end
 
 @pure SOneTo(n::Int) = SOneTo{n}()
@@ -8,7 +11,7 @@ function SOneTo{n}(r::AbstractUnitRange) where n
     errmsg(r) = throw(DimensionMismatch("$r is inconsistent with SOneTo{$n}")) # avoid GC frame
     errmsg(r)
 end
-Base.Tuple(::SOneTo{N}) where N = ntuple(identity, Val(N))
+@pure Base.Tuple(::SOneTo{N}) where N = ntuple(identity, Val(N))
 
 @pure Base.axes(s::SOneTo) = (s,)
 @pure Base.size(s::SOneTo{n}) where n = (n,)
@@ -19,11 +22,11 @@ Base.axes(S::Base.Slice{<:SOneTo}) = (S.indices,)
 Base.unsafe_indices(S::Base.Slice{<:SOneTo}) = (S.indices,)
 Base.axes1(S::Base.Slice{<:SOneTo}) = S.indices
 
-@propagate_inbounds function Base.getindex(s::SOneTo, i::Int)
+@propagate_inbounds @pure function Base.getindex(s::SOneTo, i::Int)
     @boundscheck checkbounds(s, i)
     return i
 end
-@propagate_inbounds function Base.getindex(s::SOneTo, s2::SOneTo)
+@propagate_inbounds @pure function Base.getindex(s::SOneTo, s2::SOneTo)
     @boundscheck checkbounds(s, s2)
     return s2
 end
@@ -55,5 +58,5 @@ Base.@pure function Base.checkindex(::Type{Bool}, ::SOneTo{n1}, ::SOneTo{n2}) wh
     return n1::Int >= n2::Int
 end
 
-Base.promote_rule(a::Type{Base.OneTo{T}}, ::Type{SOneTo{n}}) where {T,n} =
+@pure Base.promote_rule(a::Type{Base.OneTo{T}}, ::Type{SOneTo{n}}) where {T,n} =
     Base.OneTo{promote_type(T, Int)}

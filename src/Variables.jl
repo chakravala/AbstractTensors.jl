@@ -1,4 +1,7 @@
 
+# This file is adapted from JuliaArrays/StaticArrays.jl License is MIT:
+# https://github.com/JuliaArrays/StaticArrays.jl/blob/master/LICENSE.md
+
 # MArray.jl
 
 mutable struct Variables{N,T} <: TupleVector{N,T}

@@ -1,4 +1,7 @@
 
+# This file is adapted from JuliaArrays/StaticArrays.jl License is MIT:
+# https://github.com/JuliaArrays/StaticArrays.jl/blob/master/LICENSE.md
+
 Base.axes(::TupleVector{N}) where N = _axes(Val(N))
 @pure function _axes(::Val{sizes}) where {sizes}
     map(SOneTo, (sizes,))
@@ -24,8 +27,8 @@ similar_type(::Type{A},n::Val) where {A<:AbstractArray} = similar_type(A,eltype(
 similar_type(::A,::Type{T},n::Val) where {A<:AbstractArray,T} = similar_type(A,T,n)
 
 # We should be able to deal with SOneTo axes
-similar_type(s::SOneTo) = similar_type(typeof(s))
-similar_type(::Type{SOneTo{n}}) where n = similar_type(SOneTo{n}, Int, Val(n))
+@pure similar_type(s::SOneTo) = similar_type(typeof(s))
+@pure similar_type(::Type{SOneTo{n}}) where n = similar_type(SOneTo{n}, Int, Val(n))
 
 # Default types
 # Generally, use SArray
@@ -102,24 +105,3 @@ end
         @inbounds return similar_type(a, promote_type(eltype(a), eltype(b)), Val($Snew))(tuple($(exprs...)))
     end
 end
-
-#=@inline hcat(a::StaticVector) = similar_type(a, Size(Size(a)[1],1))(a)
-@inline hcat(a::StaticMatrixLike) = a
-@inline hcat(a::StaticVecOrMatLike, b::StaticVecOrMatLike) = _hcat(Size(a), Size(b), a, b)
-@inline hcat(a::StaticVecOrMatLike, b::StaticVecOrMatLike, c::StaticVecOrMatLike...) = hcat(hcat(a,b), hcat(c...))
-
-@generated function _hcat(::Size{Sa}, ::Size{Sb}, a::StaticVecOrMatLike, b::StaticVecOrMatLike) where {Sa, Sb}
-    if Sa[1] != Sb[1]
-        return :(throw(DimensionMismatch("Tried to hcat arrays of size $Sa and $Sb")))
-    end
-
-    exprs = vcat([:(a[$i]) for i = 1:prod(Sa)],
-                 [:(b[$i]) for i = 1:prod(Sb)])
-
-    Snew = (Sa[1], Size(Sa)[2] + Size(Sb)[2])
-
-    return quote
-        @_inline_meta
-        @inbounds return similar_type(a, promote_type(eltype(a), eltype(b)), Size($Snew))(tuple($(exprs...)))
-    end
-end=#

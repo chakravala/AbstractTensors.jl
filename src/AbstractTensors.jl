@@ -306,13 +306,20 @@ signbit(x::Expr) = x.head == :call && x.args[1] == :-
 -(x) = Base.:-(x)
 -(x::Symbol) = :(-$x)
 @inline dot(x,y) = LinearAlgebra.dot(x,y)
+@inline exp(z) = Base.exp(z)
 
-for op ∈ (:conj,:inv,:sqrt,:abs,:exp,:expm1,:log,:log1p,:sin,:cos,:sinh,:cosh,:signbit)
-    @eval @inline $op(z) = Base.$op(z)
+for op ∈ (:conj,:inv,:sqrt,:abs,:expm1,:log,:log1p,:sin,:cos,:sinh,:cosh,:signbit)
+    @eval begin
+        @inline $op(z) = Base.$op(z)
+        @inline $op(z::Z) where Z<:TensorAlgebra = Base.$op(z)
+    end
 end
 
 for op ∈ (:/,:-,:^,:≈)
-    @eval @inline $op(a,b) = Base.$op(a,b)
+    @eval begin
+        @inline $op(a,b) = Base.$op(a,b)
+        @inline $op(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = Base.$op(a,b)
+    end
 end
 
 for T ∈ (Expr,Symbol)

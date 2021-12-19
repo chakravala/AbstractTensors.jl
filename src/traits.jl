@@ -1,9 +1,12 @@
 
+# This file is adapted from JuliaArrays/StaticArrays.jl License is MIT:
+# https://github.com/JuliaArrays/StaticArrays.jl/blob/master/LICENSE.md
+
 """
 Return either the statically known Val() or runtime length()
 """
-@inline _size(a) = Val(length(a))
-@inline _size(a::TupleVector{n}) where n = Val(n)
+@pure @inline _size(a) = Val(length(a))
+@pure @inline _size(a::TupleVector{n}) where n = Val(n)
 
 # Return static array from a set of arrays
 @inline _first_static(a1::TupleVector, as...) = a1

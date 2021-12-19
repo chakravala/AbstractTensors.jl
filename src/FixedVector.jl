@@ -1,4 +1,7 @@
 
+# This file is adapted from JuliaArrays/StaticArrays.jl License is MIT:
+# https://github.com/JuliaArrays/StaticArrays.jl/blob/master/LICENSE.md
+
 struct FixedVector{N,T} <: TupleVector{N,T}
     v::Vector{T}
     function FixedVector{N,T}(a::Vector) where {N,T}

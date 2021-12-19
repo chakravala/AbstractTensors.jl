@@ -1,3 +1,7 @@
+
+# This file is adapted from JuliaArrays/StaticArrays.jl License is MIT:
+# https://github.com/JuliaArrays/StaticArrays.jl/blob/master/LICENSE.md
+
 (::Type{SA})(x::Tuple{Tuple{Tuple{<:Tuple}}}) where {SA <: TupleVector} =
     throw(DimensionMismatch("No precise constructor for $SA found. Val of input was $(length(x[1][1][1]))."))
 

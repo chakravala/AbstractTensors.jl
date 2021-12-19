@@ -1,4 +1,7 @@
 
+# This file is adapted from JuliaArrays/StaticArrays.jl License is MIT:
+# https://github.com/JuliaArrays/StaticArrays.jl/blob/master/LICENSE.md
+
 @inline Base.zero(a::SA) where {SA<:TupleVector} = zeros(SA)
 @inline Base.zero(a::Type{SA}) where {SA<:TupleVector} = zeros(SA)
 
