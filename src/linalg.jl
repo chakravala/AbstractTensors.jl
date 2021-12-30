@@ -10,26 +10,26 @@
 @inline Base.:-(a::TupleVector{n,<:Number}) where n = map(Base.:-, a)
 
 # Binary ops
-# Between arrays
+# Between vectors
 @inline Base.:+(a::TupleVector, b::TupleVector) = map(∑, a, b)
-@inline Base.:+(a::AbstractArray, b::TupleVector) = map(∑, a, b)
-@inline Base.:+(a::TupleVector, b::AbstractArray) = map(∑, a, b)
+@inline Base.:+(a::AbstractVector, b::TupleVector) = map(∑, a, b)
+@inline Base.:+(a::TupleVector, b::AbstractVector) = map(∑, a, b)
 
 @inline Base.:+(a::TupleVector{n,<:Number}, b::TupleVector{n,<:Number}) where n = map(Base.:+, a, b)
-@inline Base.:+(a::AbstractArray{<:Number}, b::TupleVector{n,<:Number}) where n = map(Base.:+, a, b)
-@inline Base.:+(a::TupleVector{n,<:Number}, b::AbstractArray{<:Number}) where n = map(Base.:+, a, b)
+@inline Base.:+(a::AbstractVector{<:Number}, b::TupleVector{n,<:Number}) where n = map(Base.:+, a, b)
+@inline Base.:+(a::TupleVector{n,<:Number}, b::AbstractVector{<:Number}) where n = map(Base.:+, a, b)
 
 @inline Base.:-(a::TupleVector, b::TupleVector) = map(-, a, b)
-@inline Base.:-(a::AbstractArray, b::TupleVector) = map(-, a, b)
-@inline Base.:-(a::TupleVector, b::AbstractArray) = map(-, a, b)
+@inline Base.:-(a::AbstractVector, b::TupleVector) = map(-, a, b)
+@inline Base.:-(a::TupleVector, b::AbstractVector) = map(-, a, b)
 
 @inline Base.:-(a::TupleVector{n,<:Number}, b::TupleVector{n,<:Number}) where n = map(Base.:-, a, b)
-@inline Base.:-(a::AbstractArray{<:Number}, b::TupleVector{n,<:Number}) where n = map(Base.:-, a, b)
-@inline Base.:-(a::TupleVector{n,<:Number}, b::AbstractArray{<:Number}) where n = map(Base.:-, a, b)
+@inline Base.:-(a::AbstractVector{<:Number}, b::TupleVector{n,<:Number}) where n = map(Base.:-, a, b)
+@inline Base.:-(a::TupleVector{n,<:Number}, b::AbstractVector{<:Number}) where n = map(Base.:-, a, b)
 
-# Scalar-array
-@inline Base.:*(a::Number, b::TupleVector{n,<:Number}) where n = broadcast(Base.:*, a, b)
-@inline Base.:*(a::TupleVector{n,<:Number}, b::Number) where n = broadcast(Base.:*, a, b)
+# Scalar-vector
+@inline Base.:*(a::Number, b::TupleVector{n,<:Number}) where n = map(c->Base.:*(a,c), b)
+@inline Base.:*(a::TupleVector{n,<:Number}, b::Number) where n = map(c->Base.:*(c,b), a)
 
 @inline Base.:*(a, b::TupleVector) = broadcast(∏, a, b)
 @inline Base.:*(a::TupleVector, b) = broadcast(∏, a, b)
@@ -45,6 +45,10 @@
 
 @inline Base.:/(a::TupleVector, b) = broadcast(/, a, b)
 @inline Base.:\(a, b::TupleVector) = broadcast(\, a, b)
+
+# Ternary ops
+@inline Base.muladd(scalar::Number, a::TupleVector, b::TupleVector) = map((ai, bi) -> muladd(scalar, ai, bi), a, b)
+@inline Base.muladd(a::TupleVector, scalar::Number, b::TupleVector) = map((ai, bi) -> muladd(ai, scalar, bi), a, b)
 
 #--------------------------------------------------
 # Vector products
@@ -69,16 +73,22 @@ end
 
 #--------------------------------------------------
 # Norms
-@inline LinearAlgebra.norm_sqr(v::TupleVector) = mapreduce(Base.abs2, Base.:+, v; init=zero(real(eltype(v))))
+_inner_eltype(v::AbstractVector) = isempty(v) ? eltype(v) : _inner_eltype(first(v))
+_inner_eltype(x::Number) = typeof(x)
+@inline _init_zero(v::TupleVector) = float(norm(zero(_inner_eltype(v))))
+
+@inline function LinearAlgebra.norm_sqr(v::TupleVector)
+    return mapreduce(LinearAlgebra.norm_sqr, Base.:+, v; init=_init_zero(v))
+end
 
 @inline LinearAlgebra.norm(a::TupleVector) = _norm(a)
 @generated function _norm(a::TupleVector{S}) where S
     if S == 0
-        return :(zero(real(eltype(a))))
+        return :(_init_zero(a))
     end
-    expr = :(Base.abs2(a[1]))
+    expr = :(LinearAlgebra.norm_sqr(a[1]))
     for j = 2:S
-        expr = :($expr + Base.abs2(a[$j]))
+        expr = :($expr + LinearAlgebra.norm_sqr(a[$j]))
     end
     return quote
         $(Expr(:meta, :inline))
@@ -86,14 +96,17 @@ end
     end
 end
 
-_norm_p0(x) = x == 0 ? zero(x) : one(x)
+function _norm_p0(x)
+    T = _inner_eltype(x)
+    return float(norm(iszero(x) ? zero(T) : one(T)))
+end
 
 @inline LinearAlgebra.norm(a::TupleVector, p::Real) = _norm(a, p)
 @generated function _norm(a::TupleVector{S,T}, p::Real) where {S,T}
     if S == 0
-        return :(zero(real(eltype(a))))
+        return :(_init_zero(a))
     end
-    fun = T<:Number ? :(Base.abs) : :abs
+    fun = T<:Number ? :(LinearAlgebra.norm) : :norm
     expr = :($fun(a[1])^p)
     for j = 2:S
         expr = :($expr + $fun(a[$j])^p)
@@ -105,7 +118,7 @@ _norm_p0(x) = x == 0 ? zero(x) : one(x)
     return quote
         $(Expr(:meta, :inline))
         if p == Inf
-            return mapreduce(Base.abs, max, a)
+            return mapreduce($fun, max, a)
         elseif p == 1
             @inbounds return $expr_p1
         elseif p == 2

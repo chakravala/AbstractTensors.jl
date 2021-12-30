@@ -17,8 +17,8 @@ provided explicitly.
 
 A couple of helpful type aliases are also provided:
 
-* `TV_F64[1, 2]` creates a lenght-2 `Values` of `Float64` elements
-* `TV_F32[1, 2]` creates a lenght-2 `Values` of `Float32` elements
+* `TV_F64[1, 2]` creates a length-2 `Values` of `Float64` elements
+* `TV_F32[1, 2]` creates a length-2 `Values` of `Float32` elements
 """
 struct TV{T} ; end
 

@@ -21,18 +21,18 @@ similar_type(::Type{SA}) where {SA<:TupleVector} = similar_type(SA,eltype(SA))
 similar_type(::SA,::Type{T}) where {SA<:TupleVector{N},T} where N = similar_type(SA,T,Val(N))
 similar_type(::Type{SA},::Type{T}) where {SA<:TupleVector{N},T} where N = similar_type(SA,T,Val(N))
 
-similar_type(::A,n::Val) where {A<:AbstractArray} = similar_type(A,eltype(A),n)
-similar_type(::Type{A},n::Val) where {A<:AbstractArray} = similar_type(A,eltype(A),n)
+similar_type(::A,n::Val) where {A<:AbstractVector} = similar_type(A,eltype(A),n)
+similar_type(::Type{A},n::Val) where {A<:AbstractVector} = similar_type(A,eltype(A),n)
 
-similar_type(::A,::Type{T},n::Val) where {A<:AbstractArray,T} = similar_type(A,T,n)
+similar_type(::A,::Type{T},n::Val) where {A<:AbstractVector,T} = similar_type(A,T,n)
 
 # We should be able to deal with SOneTo axes
 @pure similar_type(s::SOneTo) = similar_type(typeof(s))
 @pure similar_type(::Type{SOneTo{n}}) where n = similar_type(SOneTo{n}, Int, Val(n))
 
 # Default types
-# Generally, use SArray
-similar_type(::Type{A},::Type{T},n::Val) where {A<:AbstractArray,T} = default_similar_type(T,n)
+# Generally, use TupleVector
+similar_type(::Type{A},::Type{T},n::Val) where {A<:AbstractVector,T} = default_similar_type(T,n)
 default_similar_type(::Type{T},::Val{N}) where {N,T} = Values{N,T}
 
 similar_type(::Type{SA},::Type{T},n::Val) where {SA<:Variables,T} = mutable_similar_type(T,n)
@@ -40,7 +40,7 @@ similar_type(::Type{SA},::Type{T},n::Val) where {SA<:Variables,T} = mutable_simi
 mutable_similar_type(::Type{T},::Val{N}) where {N,T} = Variables{N,T}
 
 similar_type(::Type{<:FixedVector},::Type{T},n::Val) where T = sizedarray_similar_type(T,n)
-# Should FixedVector also be used for normal Array?
+# Should FixedVector also be used for normal Vector?
 #similar_type(::Type{<:Array},::Type{T},n::Val) where T = sizedarray_similar_type(T,n)
 
 sizedarray_similar_type(::Type{T},::Val{N}) where {N,T} = FixedVector{N,T}
@@ -52,17 +52,17 @@ Base.similar(::SA,::Type{T}) where {SA<:TupleVector{N},T} where N = similar(SA,T
 Base.similar(::Type{SA},::Type{T}) where {SA<:TupleVector{N},T} where N = similar(SA,T,Val(N))
 
 # Cases where a Val is given as the dimensions
-Base.similar(::A,n::Val) where A<:AbstractArray = similar(A,eltype(A),n)
-Base.similar(::Type{A},n::Val) where A<:AbstractArray = similar(A,eltype(A),n)
+Base.similar(::A,n::Val) where A<:AbstractVector = similar(A,eltype(A),n)
+Base.similar(::Type{A},n::Val) where A<:AbstractVector = similar(A,eltype(A),n)
 
-Base.similar(::A,::Type{T},n::Val) where {A<:AbstractArray,T} = similar(A,T,n)
+Base.similar(::A,::Type{T},n::Val) where {A<:AbstractVector,T} = similar(A,T,n)
 
 # defaults to built-in mutable types
-Base.similar(::Type{A},::Type{T},n::Val) where {A<:AbstractArray,T} = mutable_similar_type(T,n)(undef)
+Base.similar(::Type{A},::Type{T},n::Val) where {A<:AbstractVector,T} = mutable_similar_type(T,n)(undef)
 
 # both FixedVector and Array return FixedVector
 Base.similar(::Type{SA},::Type{T},n::Val) where {SA<:FixedVector,T} = sizedarray_similar_type(T,n)(undef)
-Base.similar(::Type{A},::Type{T},n::Val) where {A<:Array,T} = sizedarray_similar_type(T,n)(undef)
+Base.similar(::Type{A},::Type{T},n::Val) where {A<:Vector,T} = sizedarray_similar_type(T,n)(undef)
 
 # Support tuples of mixtures of `SOneTo`s alongside the normal `Integer` and `OneTo` options
 # by simply converting them to either a tuple of Ints or a Val, re-dispatching to either one
@@ -104,4 +104,18 @@ end
         @_inline_meta
         @inbounds return similar_type(a, promote_type(eltype(a), eltype(b)), Val($Snew))(tuple($(exprs...)))
     end
+end
+
+if VERSION >= v"1.6.0-DEV.1334"
+    # FIXME: This always assumes one-based linear indexing and that subtypes of TupleVector
+    # don't overload iterate
+    @inline function Base.rest(a::TupleVector{N}, (_, i) = (nothing, 0)) where N
+        return similar_type(typeof(a), Val(N - i))(Base.rest(Tuple(a), i + 1))
+    end
+end
+
+# SArrays may avoid the SubArray wrapper and consequently an additional level of indirection
+# The output may use the broadcasting machinery defined for StaticArrays (see issue #892)
+function Base.view(S::Values, I::Union{Colon, Integer, SOneTo, TupleVector{N, Int} where N, CartesianIndex})
+    getindex(S, I)
 end
