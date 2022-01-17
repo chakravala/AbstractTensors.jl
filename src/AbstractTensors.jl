@@ -42,6 +42,7 @@ Terms of a `TensorAlgebra` having a single coefficient.
 abstract type TensorTerm{V,G} <: TensorGraded{V,G} end
 Base.@pure isterm(t::T) where T<:TensorTerm = true
 Base.@pure isterm(t) = false
+Base.isfinite(b::T) where T<:TensorTerm = isfinite(value(b))
 
 """
     TensorMixed{V} <: TensorAlgebra{V}
@@ -157,6 +158,8 @@ for X ∈ TAG, Y ∈ TAG
         @inline ∗(a::A,b::B) where {A<:$X{V},B<:$Y{V}} where V = (~a)*b
         @inline ⊛(a::A,b::B) where {A<:$X{V},B<:$Y{V}} where V = scalar(contraction(a,b))
         @inline ⨼(a::A,b::B) where {A<:$X{V},B<:$Y{V}} where V = contraction(b,a)
+        @inline Base.:<<(a::A,b::B) where {A<:$X{V},B<:$Y{V}} where V = contraction(b,~a)
+        @inline Base.:>>(a::A,b::B) where {A<:$X{V},B<:$Y{V}} where V = contraction(~a,b)
         @inline Base.:<(a::A,b::B) where {A<:$X{V},B<:$Y{V}} where V = contraction(b,a)
     end
     for op ∈ (:⨽,:(Base.:>),:(Base.:|),:(LinearAlgebra.dot))
@@ -166,7 +169,7 @@ end
 
 # lattice defaults
 
-import AbstractLattices: ∧, ∨
+import AbstractLattices: ∧, ∨, wedge, vee
 
 @inline ∧() = 1
 @inline ∨() = I
@@ -174,7 +177,7 @@ import AbstractLattices: ∧, ∨
 # extended compatibility interface
 
 export TensorAlgebra, Manifold, TensorGraded, Distribution
-export istensor, ismanifold, isterm, isgraded, ismixed, rank, mdims, values
+export istensor, ismanifold, isterm, isgraded, ismixed, rank, mdims, values, hodge
 export scalar, isscalar, vector, isvector, bivector, isbivector, volume, isvolume
 export value, valuetype, interop, interform, involute, unit, even, odd, contraction
 export ⊘, ⊖, ⊗, ⊛, ⊙, ⊠, ×, ⨼, ⨽, ⋆, ∗, ⁻¹, ǂ, ₊, ₋, ˣ
@@ -183,20 +186,36 @@ export ⊘, ⊖, ⊗, ⊛, ⊙, ⊠, ×, ⨼, ⨽, ⋆, ∗, ⁻¹, ǂ, ₊, ₋
 
 for op ∈ (:(Base.:+),:(Base.:-),:(Base.:*),:⊘,:⊛,:∗,:⨼,:⨽,:contraction,:(LinearAlgebra.dot),:(Base.:|),:(Base.:(==)),:(Base.:<),:(Base.:>),:(Base.:<<),:(Base.:>>),:(Base.:>>>),:(Base.div),:(Base.rem),:(Base.:&))
     @eval begin
-        @inline $op(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = interop($op,a,b)
         @inline $op(a::A,b::UniformScaling) where A<:TensorAlgebra = $op(a,Manifold(a)(b))
         @inline $op(a::UniformScaling,b::B) where B<:TensorAlgebra = $op(Manifold(b)(a),b)
     end
 end
+#const plus,minus,times = Base.:+,Base.:-,Base.:*
+Base.:+(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = plus(a,b)
+Base.:-(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = minus(a,b)
+Base.:*(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = times(a,b)
+LinearAlgebra.dot(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = contraction(a,b)
+Base.:(==)(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = equal(a,b)
+for op ∈ (:plus,:minus,:times,:contraction,:equal)
+    @eval @inline $op(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = interop($op,a,b)
+end
+for op ∈ (:⊘,:⊛,:∗,:(Base.:|),:(Base.:<),:(Base.:>),:(Base.:<<),:(Base.:>>),:(Base.:>>>),:(Base.div),:(Base.rem),:(Base.:&))
+    @eval @inline $op(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = interop($op,a,b)
+end
 
-for op ∈ (:(Base.:!),:⋆)
+for op ∈ (:(Base.:!),:complementrighthodge)
     for T ∈ (:Real,:Complex)
         @eval @inline $op(t::T) where T<:$T = UniformScaling(t)
     end
 end
 
+const complement = !
+const complementright = !
+const ⋆ = complementrighthodge
+const hodge = complementrighthodge
+
 const ⊖ = *
-@inline Base.:|(t::T) where T<:TensorAlgebra = ⋆(t)
+@inline Base.:|(t::T) where T<:TensorAlgebra = hodge(t)
 @inline Base.:!(t::UniformScaling{T}) where T = T<:Bool ? (t.λ ? 1 : 0) : t.λ
 @inline Base.:/(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = a*Base.inv(b)
 @inline Base.:/(a::UniformScaling,b::B) where B<:TensorAlgebra = Manifold(b)(a)*Base.inv(b)
@@ -220,7 +239,7 @@ for op ∈ (:scalar,:involute,:even)
     @eval $op(t::T) where T<:Real = t
 end
 odd(::T) where T<:Real = 0
-LinearAlgebra.cross(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = ⋆(∧(a,b))
+LinearAlgebra.cross(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = hodge(∧(a,b))
 
 @inline Base.exp(t::T) where T<:TensorAlgebra = 1+Base.expm1(t)
 @inline Base.log(b,t::T) where T<:TensorAlgebra = Base.log(t)/Base.log(b)
@@ -270,16 +289,6 @@ Base.cosc(t::T) where T<:TensorAlgebra = iszero(t) ? zero(Manifold(t)) : (x=(1π
 @inline Base.iszero(t::T) where T<:TensorAlgebra = LinearAlgebra.norm(t) ≈ 0
 @inline Base.isone(t::T) where T<:TensorAlgebra = LinearAlgebra.norm(t)≈value(scalar(t))≈1
 @inline LinearAlgebra.dot(a::A,b::B) where {A<:TensorGraded,B<:TensorGraded} = contraction(a,b)
-
-# identity elements
-
-for id ∈ (:zero,:one)
-    @eval begin
-        @inline Base.$id(t::T) where T<:TensorAlgebra = $id(Manifold(t))
-        @inline Base.$id(::Type{T}) where T<:TensorAlgebra{V} where V = $id(V)
-        @inline Base.$id(::Type{T}) where T<:TensorGraded{V} where V = $id(V)
-    end
-end
 
 # postfix operators
 

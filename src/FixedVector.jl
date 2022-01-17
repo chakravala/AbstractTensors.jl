@@ -10,7 +10,7 @@ struct FixedVector{N,T,TData<:AbstractVector{T}} <: TupleVector{N,T}
     function FixedVector{N,T,TData}(a::TData) where {N,T,TData<:AbstractVector{T}}
         require_one_based_indexing(a)
         if length(a) != N
-            throw(DimensionMismatch("Dimensions $(size(a)) don't match static size $S"))
+            throw(DimensionMismatch("Dimensions $(length(a)) don't match static size $N"))
         end
         new{N,T,TData}(a)
     end
