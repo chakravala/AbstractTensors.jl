@@ -159,7 +159,7 @@ end
 end
 
 @generated function _mapfoldl(f, op, dims::Val{1}, init,
-                               ::Val{S}, a::TupleVector) where {S,D}
+                               ::Val{S}, a::TupleVector) where S
 
     exprs = Array{Expr}(undef, 1)
     for i ∈ Base.product(1:1)

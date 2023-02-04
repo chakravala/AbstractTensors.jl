@@ -1,6 +1,24 @@
 
-#   This file is part of AbstractTensors.jl. It is licensed under the AGPL license
-#   Grassmann Copyright (C) 2019 Michael Reed
+#   This file is part of AbstractTensors.jl
+#   It is licensed under the MIT license
+#   AbstractTensors Copyright (C) 2019 Michael Reed
+#       _           _                         _
+#      | |         | |                       | |
+#   ___| |__   __ _| | ___ __ __ ___   ____ _| | __ _
+#  / __| '_ \ / _` | |/ / '__/ _` \ \ / / _` | |/ _` |
+# | (__| | | | (_| |   <| | | (_| |\ V / (_| | | (_| |
+#  \___|_| |_|\__,_|_|\_\_|  \__,_| \_/ \__,_|_|\__,_|
+#
+#   https://github.com/chakravala
+#   https://crucialflow.com
+#  _______  __            __                       __
+# |   _   ||  |--..-----.|  |_ .----..---.-..----.|  |_
+# |       ||  _  ||__ --||   _||   _||  _  ||  __||   _|
+# |___|___||_____||_____||____||__|  |___._||____||____|
+#   _______
+#  |_     _|.-----..-----..-----..-----..----..-----.
+#    |   |  |  -__||     ||__ --||  _  ||   _||__ --|
+#    |___|  |_____||__|__||_____||_____||__|  |_____|
 
 module AbstractTensors
 
