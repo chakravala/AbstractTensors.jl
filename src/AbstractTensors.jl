@@ -372,8 +372,8 @@ if haskey(ENV,"STATICJL")
     import StaticArrays: SVector, MVector, SizedVector, StaticVector, _diff
     const Values,Variables,FixedVector,TupleVector = SVector,MVector,SizedVector,StaticVector
 else
-    include("static.jl")
-    const SVector,MVector,SizedVector = Values,Variables,FixedVector
+    import StaticVectors: Values, Variables, FixedVector, TupleVector, _diff
+    import StaticVectors: SVector, MVector, SizedVector
 end
 
 end # module
