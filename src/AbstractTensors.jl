@@ -323,6 +323,8 @@ end
 
 # dispatch
 
+import StaticVectors: inv, ∏, ∑, -, /
+
 @inline norm(z::Expr) = abs(z)
 @inline norm(z::Symbol) = z
 Base.@pure isnull(::Expr) = false
@@ -330,23 +332,23 @@ Base.@pure isnull(::Symbol) = false
 isnull(n) = iszero(n)
 signbit(x::Symbol) = false
 signbit(x::Expr) = x.head == :call && x.args[1] == :-
--(x) = Base.:-(x)
--(x::Symbol) = :(-$x)
+
 @inline dot(x,y) = LinearAlgebra.dot(x,y)
 @inline exp(z) = Base.exp(z)
 
-for op ∈ (:conj,:inv,:sqrt,:abs,:expm1,:log,:log1p,:sin,:cos,:sinh,:cosh,:signbit)
+@inline inv(z::Z) where Z<:TensorAlgebra = Base.inv(z)
+for op ∈ (:conj,:sqrt,:abs,:expm1,:log,:log1p,:sin,:cos,:sinh,:cosh,:signbit)
     @eval begin
         @inline $op(z) = Base.$op(z)
         @inline $op(z::Z) where Z<:TensorAlgebra = Base.$op(z)
     end
 end
 
-for op ∈ (:/,:-,:^,:≈)
-    @eval begin
-        @inline $op(a,b) = Base.$op(a,b)
-        @inline $op(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = Base.$op(a,b)
-    end
+for op ∈ (:^,:≈)
+    @eval @inline $op(a,b) = Base.$op(a,b)
+end
+for op ∈ (:-,:/,:^,:≈)
+    @eval @inline $op(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = Base.$op(a,b)
 end
 
 for T ∈ (Expr,Symbol)
@@ -358,10 +360,7 @@ for T ∈ (Expr,Symbol)
 end
 
 for (OP,op) ∈ ((:∏,:*),(:∑,:+))
-    @eval begin
-        @inline $OP(x...) = Base.$op(x...)
-        @inline $OP(x::AbstractVector{T}) where T<:Any = $op(x...)
-    end
+    @eval @inline $OP(x::AbstractVector{T}) where T<:Any = $op(x...)
 end
 
 const PROD,SUM,SUB,√ = ∏,∑,-,sqrt
