@@ -370,9 +370,11 @@ export TupleVector, Values, Variables, FixedVector
 if haskey(ENV,"STATICJL")
     import StaticArrays: SVector, MVector, SizedVector, StaticVector, _diff
     const Values,Variables,FixedVector,TupleVector = SVector,MVector,SizedVector,StaticVector
+    Base.@pure countvalues(a::Int,b::Int) = Values{max(0,b-a+1),Int}(a:b...)
+    Base.@pure evenvalues(a::Int,b::Int) = Values{((b-a)÷2)+1,Int}(a:2:b...)
 else
     import StaticVectors: Values, Variables, FixedVector, TupleVector, _diff
-    import StaticVectors: SVector, MVector, SizedVector
+    import StaticVectors: SVector, MVector, SizedVector, countvalues, evenvalues
 end
 
 end # module
