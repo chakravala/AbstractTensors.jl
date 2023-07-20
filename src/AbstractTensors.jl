@@ -53,6 +53,34 @@ Base.@pure isgraded(t::T) where T<:TensorGraded = true
 Base.@pure isgraded(t) = false
 
 """
+    Scalar{V} <: TensorGraded{V,0}
+
+Graded scalar elements of a `TensorAlgebra` in a `Manifold` topology.
+"""
+const Scalar{V} = TensorGraded{V,0}
+
+"""
+    GradedVector{V} <: TensorGraded{V,1}
+
+Graded vector elements of a `TensorAlgebra` in a `Manifold` topology.
+"""
+const GradedVector{V} = TensorGraded{V,1}
+
+"""
+    Bivector{V} <: TensorGraded{V,2}
+
+Graded bivector elements of a `TensorAlgebra` in a `Manifold` topology.
+"""
+const Bivector{V} = TensorGraded{V,2}
+
+"""
+    Trivector{V} <: TensorGraded{V,3}
+
+Graded trivector elements of a `TensorAlgebra` in a `Manifold` topology.
+"""
+const Trivector{V} = TensorGraded{V,3}
+
+"""
     TensorTerm{V,G} <: TensorGraded{V,G}
 
 Terms of a `TensorAlgebra` having a single coefficient.
@@ -195,6 +223,7 @@ import AbstractLattices: ∧, ∨, wedge, vee
 # extended compatibility interface
 
 export TensorAlgebra, Manifold, TensorGraded, Distribution
+export Scalar, GradedVector, Bivector, Trivector
 export istensor, ismanifold, isterm, isgraded, ismixed, rank, mdims, values, hodge
 export scalar, isscalar, vector, isvector, bivector, isbivector, volume, isvolume
 export value, valuetype, interop, interform, involute, unit, even, odd, contraction
@@ -364,6 +393,16 @@ for (OP,op) ∈ ((:∏,:*),(:∑,:+))
 end
 
 const PROD,SUM,SUB,√ = ∏,∑,-,sqrt
+
+export FloatVector, FloatMatrix, FloatArray
+const FloatVector{T<:AbstractFloat} = AbstractVector{T}
+const FloatMatrix{T<:AbstractFloat} = AbstractMatrix{T}
+const FloatArray{N,T<:AbstractFloat} = AbstractArray{T,N}
+
+export RealVector, RealMatrix, RealArray
+const RealVector{T<:Real} = AbstractVector{T}
+const RealMatrix{T<:Real} = AbstractMatrix{T}
+const RealArray{N,T<:Real} = AbstractArray{T,N}
 
 export TupleVector, Values, Variables, FixedVector
 
