@@ -223,11 +223,11 @@ import AbstractLattices: ∧, ∨, wedge, vee
 # extended compatibility interface
 
 export TensorAlgebra, Manifold, TensorGraded, Distribution
-export Scalar, GradedVector, Bivector, Trivector, contraction
+export Scalar, GradedVector, Bivector, Trivector, contraction, wedgedot, veedot
 export istensor, ismanifold, isterm, isgraded, ismixed, rank, mdims, values, hodge
 export scalar, isscalar, vector, isvector, bivector, isbivector, volume, isvolume
 export value, valuetype, interop, interform, involute, unit, unitize, even, odd
-export ⟑, ⟇, ⊘, ⊖, ⊗, ⊛, ⊙, ⊠, ×, ⨼, ⨽, ⋆, ∗, ⁻¹, ǂ, ₊, ₋, ˣ, antiabs, antiabs2, geomabs
+export ⟑, ⊘, ⊖, ⊗, ⊛, ⊙, ⊠, ×, ⨼, ⨽, ⋆, ∗, ⁻¹, ǂ, ₊, ₋, ˣ, antiabs, antiabs2, geomabs
 
 # some shared presets
 
@@ -261,7 +261,7 @@ const complementright = !
 const ⋆ = complementrighthodge
 const hodge = complementrighthodge
 
-const ⊖,⟑ = *,*
+const ⊖,⟑,wedgedot = *,*,*
 @inline Base.:|(t::T) where T<:TensorAlgebra = hodge(t)
 @inline Base.:!(t::UniformScaling{T}) where T = T<:Bool ? (t.λ ? 1 : 0) : t.λ
 @inline Base.:/(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = a*Base.inv(b)
@@ -279,7 +279,7 @@ Base.:∘(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = contraction(a,b
 for op ∈ (:(Base.:+),:(Base.:*))
     @eval $op(t::T) where T<:TensorAlgebra = t
 end
-for op ∈ (:⟇,:⊙,:⊠,:¬,:⋆,:clifford,:basis,:complementleft,:complementlefthodge)
+for op ∈ (:⊙,:⊠,:¬,:⋆,:clifford,:basis,:complementleft,:complementlefthodge,:veedot)
     @eval function $op end
 end
 for op ∈ (:scalar,:involute,:even)
@@ -336,7 +336,7 @@ Base.cosc(t::T) where T<:TensorAlgebra = iszero(t) ? zero(Manifold(t)) : (x=(1π
 @inline norm(z) = LinearAlgebra.norm(z)
 @inline LinearAlgebra.norm(t::T) where T<:TensorAlgebra = norm(value(t))
 @inline unit(t::T) where T<:Number = Base.:/(t,Base.abs(t))
-@inline unitize(t::T) where T<:Number = Base.:/(t,value(Base.antiabs(t)))
+@inline unitize(t::T) where T<:Number = Base.:/(t,value(antiabs(t)))
 @inline Base.iszero(t::T) where T<:TensorAlgebra = LinearAlgebra.norm(t) ≈ 0
 @inline Base.isone(t::T) where T<:TensorAlgebra = LinearAlgebra.norm(t)≈value(scalar(t))≈1
 @inline LinearAlgebra.dot(a::A,b::B) where {A<:TensorGraded,B<:TensorGraded} = contraction(a,b)
@@ -397,6 +397,11 @@ for (OP,op) ∈ ((:∏,:*),(:∑,:+))
 end
 
 const PROD,SUM,SUB,√ = ∏,∑,-,sqrt
+
+if VERSION >= v"1.10.0"
+    const ⟇ = veedot
+    export ⟇
+end
 
 export FloatVector, FloatMatrix, FloatArray
 const FloatVector{T<:AbstractFloat} = AbstractVector{T}
