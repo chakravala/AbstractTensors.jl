@@ -399,8 +399,7 @@ end
 const PROD,SUM,SUB,√ = ∏,∑,-,sqrt
 
 if VERSION >= v"1.10.0"
-    const ⟇ = veedot
-    export ⟇
+    include("veedot.jl")
 end
 
 export FloatVector, FloatMatrix, FloatArray
