@@ -223,11 +223,11 @@ import AbstractLattices: ∧, ∨, wedge, vee
 # extended compatibility interface
 
 export TensorAlgebra, Manifold, TensorGraded, Distribution
-export Scalar, GradedVector, Bivector, Trivector
+export Scalar, GradedVector, Bivector, Trivector, contraction
 export istensor, ismanifold, isterm, isgraded, ismixed, rank, mdims, values, hodge
 export scalar, isscalar, vector, isvector, bivector, isbivector, volume, isvolume
-export value, valuetype, interop, interform, involute, unit, even, odd, contraction
-export ⊘, ⊖, ⊗, ⊛, ⊙, ⊠, ×, ⨼, ⨽, ⋆, ∗, ⁻¹, ǂ, ₊, ₋, ˣ
+export value, valuetype, interop, interform, involute, unit, unitize, even, odd
+export ⟑, ⟇, ⊘, ⊖, ⊗, ⊛, ⊙, ⊠, ×, ⨼, ⨽, ⋆, ∗, ⁻¹, ǂ, ₊, ₋, ˣ, antiabs, antiabs2, geomabs
 
 # some shared presets
 
@@ -261,7 +261,7 @@ const complementright = !
 const ⋆ = complementrighthodge
 const hodge = complementrighthodge
 
-const ⊖ = *
+const ⊖,⟑ = *,*
 @inline Base.:|(t::T) where T<:TensorAlgebra = hodge(t)
 @inline Base.:!(t::UniformScaling{T}) where T = T<:Bool ? (t.λ ? 1 : 0) : t.λ
 @inline Base.:/(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = a*Base.inv(b)
@@ -279,7 +279,7 @@ Base.:∘(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = contraction(a,b
 for op ∈ (:(Base.:+),:(Base.:*))
     @eval $op(t::T) where T<:TensorAlgebra = t
 end
-for op ∈ (:⊙,:⊠,:¬,:⋆,:clifford,:basis,:complementleft,:complementlefthodge)
+for op ∈ (:⟇,:⊙,:⊠,:¬,:⋆,:clifford,:basis,:complementleft,:complementlefthodge)
     @eval function $op end
 end
 for op ∈ (:scalar,:involute,:even)
@@ -328,11 +328,15 @@ Base.cosc(t::T) where T<:TensorAlgebra = iszero(t) ? zero(Manifold(t)) : (x=(1π
 # absolute value norm
 
 @inline Base.abs(t::T) where T<:TensorAlgebra = Base.sqrt(Base.abs2(t))
+@inline antiabs(t::T) where T<:TensorAlgebra = complementleft(Base.sqrt(Base.abs2(complementright(t))))
 @inline Base.abs2(t::T) where T<:TensorAlgebra = (a=(~t)*t; isscalar(a) ? scalar(a) : a)
 @inline Base.abs2(t::T) where T<:TensorGraded = contraction(t,t)
+@inline antiabs2(t::T) where T<:TensorAlgebra = complementleft(abs2(complementright(t)))
+@inline geomabs(t::T) where T<:TensorAlgebra = Base.abs(t)+antiabs(t)
 @inline norm(z) = LinearAlgebra.norm(z)
 @inline LinearAlgebra.norm(t::T) where T<:TensorAlgebra = norm(value(t))
-@inline unit(t::T) where T<:TensorAlgebra = Base.:/(t,Base.abs(t))
+@inline unit(t::T) where T<:Number = Base.:/(t,Base.abs(t))
+@inline unitize(t::T) where T<:Number = Base.:/(t,value(Base.antiabs(t)))
 @inline Base.iszero(t::T) where T<:TensorAlgebra = LinearAlgebra.norm(t) ≈ 0
 @inline Base.isone(t::T) where T<:TensorAlgebra = LinearAlgebra.norm(t)≈value(scalar(t))≈1
 @inline LinearAlgebra.dot(a::A,b::B) where {A<:TensorGraded,B<:TensorGraded} = contraction(a,b)
