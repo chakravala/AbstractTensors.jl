@@ -222,7 +222,7 @@ import AbstractLattices: ∧, ∨, wedge, vee
 
 # extended compatibility interface
 
-export TensorAlgebra, Manifold, TensorGraded, Distribution
+export TensorAlgebra, Manifold, TensorGraded, Distribution, antidot # metric, antimetric
 export Scalar, GradedVector, Bivector, Trivector, contraction, wedgedot, veedot
 export istensor, ismanifold, isterm, isgraded, ismixed, rank, mdims, values, hodge
 export scalar, isscalar, vector, isvector, bivector, isbivector, volume, isvolume
@@ -231,7 +231,7 @@ export ⟑, ⊘, ⊖, ⊗, ⊛, ⊙, ⊠, ×, ⨼, ⨽, ⋆, ∗, ⁻¹, ǂ, ₊
 
 # some shared presets
 
-for op ∈ (:(Base.:+),:(Base.:-),:(Base.:*),:⊘,:⊛,:∗,:⨼,:⨽,:contraction,:(LinearAlgebra.dot),:(Base.:|),:(Base.:(==)),:(Base.:<),:(Base.:>),:(Base.:<<),:(Base.:>>),:(Base.:>>>),:(Base.div),:(Base.rem),:(Base.:&))
+for op ∈ (:(Base.:+),:(Base.:-),:(Base.:*),:⊘,:⊛,:∗,:⨼,:⨽,:contraction,:antidot,:veedot,:(LinearAlgebra.dot),:(Base.:|),:(Base.:(==)),:(Base.:<),:(Base.:>),:(Base.:<<),:(Base.:>>),:(Base.:>>>),:(Base.div),:(Base.rem),:(Base.:&))
     @eval begin
         @inline $op(a::A,b::UniformScaling) where A<:TensorAlgebra = $op(a,Manifold(a)(b))
         @inline $op(a::UniformScaling,b::B) where B<:TensorAlgebra = $op(Manifold(b)(a),b)
@@ -243,10 +243,7 @@ Base.:-(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = minus(a,b)
 Base.:*(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = times(a,b)
 LinearAlgebra.dot(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = contraction(a,b)
 Base.:(==)(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = equal(a,b)
-for op ∈ (:plus,:minus,:times,:contraction,:equal)
-    @eval @inline $op(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = interop($op,a,b)
-end
-for op ∈ (:⊘,:⊛,:∗,:(Base.:|),:(Base.:<),:(Base.:>),:(Base.:<<),:(Base.:>>),:(Base.:>>>),:(Base.div),:(Base.rem),:(Base.:&))
+for op ∈ (:plus,:minus,:times,:contraction,:equal,:⊘,:⊛,:∗,:(Base.:|),:(Base.:<),:(Base.:>),:(Base.:<<),:(Base.:>>),:(Base.:>>>),:(Base.div),:(Base.rem),:(Base.:&))
     @eval @inline $op(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = interop($op,a,b)
 end
 
@@ -274,12 +271,12 @@ const ⊖,⟑,wedgedot = *,*,*
 @inline ⊗(a::A,b::B) where {A<:TensorAlgebra,B<:Complex} = a*b
 @inline ⊗(a::A,b::B) where {A<:Real,B<:TensorAlgebra} = a*b
 @inline ⊗(a::A,b::B) where {A<:Complex,B<:TensorAlgebra} = a*b
-Base.:∘(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = contraction(a,b)
+Base.:∘(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = antidot(a,b)
 
 for op ∈ (:(Base.:+),:(Base.:*))
     @eval $op(t::T) where T<:TensorAlgebra = t
 end
-for op ∈ (:⊙,:⊠,:¬,:⋆,:clifford,:basis,:complementleft,:complementlefthodge,:veedot)
+for op ∈ (:⊙,:⊠,:¬,:⋆,:clifford,:basis,:complementleft,:complementlefthodge,:complementleftanti,:complementrightanti,:metric,:antimetric,:veedot)
     @eval function $op end
 end
 for op ∈ (:scalar,:involute,:even)
@@ -398,9 +395,10 @@ end
 
 const PROD,SUM,SUB,√ = ∏,∑,-,sqrt
 
-if VERSION >= v"1.10.0"
-    include("veedot.jl")
-end
+if VERSION >= v"1.10.0"; @eval begin
+    const $(Symbol("⟇")) = veedot
+    export $(Symbol("⟇"))
+end end
 
 export FloatVector, FloatMatrix, FloatArray
 const FloatVector{T<:AbstractFloat} = AbstractVector{T}
