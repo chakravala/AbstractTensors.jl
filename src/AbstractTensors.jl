@@ -148,11 +148,12 @@ Return the $part (rank $G) part of any `TensorAlgebra` element.
 end
 
 """
-    pseudoscalar(::TensorAlgebra)
+    pseudoscalar(::TensorAlgebra), volume(::TensorAlgebra)
 
 Return the pseudoscalar (full rank) part of any `TensorAlgebra` element.
 """
-@inline volume(t::T) where T<:Manifold = t
+@inline pseudoscalar(t::T) where T<:Manifold = t
+const volume = pseudoscalar
 @inline volume(t::T) where T<:TensorGraded{V,G} where {V,G} = G == mdims(V) ? t : zero(V)
 @inline isvolume(t::T) where T<:TensorGraded = rank(t) == mdims(t) || iszero(t)
 
@@ -224,16 +225,16 @@ import AbstractLattices: ∧, ∨, wedge, vee
 
 # extended compatibility interface
 
-export TensorAlgebra, Manifold, TensorGraded, Distribution, antidot # metric, antimetric
-export Scalar, GradedVector, Bivector, Trivector, contraction, wedgedot, veedot
+export TensorAlgebra, Manifold, TensorGraded, Distribution, expansion # metric, antimetric
+export Scalar, GradedVector, Bivector, Trivector, contraction, wedgedot, veedot, @pseudo
 export istensor, ismanifold, isterm, isgraded, ismixed, rank, mdims, values, hodge
 export scalar, isscalar, vector, isvector, bivector, isbivector, volume, isvolume
-export value, valuetype, interop, interform, involute, unit, unitize, even, odd
+export value, valuetype, interop, interform, involute, unit, unitize, unitnorm, even, odd
 export ⟑, ⊘, ⊖, ⊗, ⊛, ⊙, ⊠, ×, ⨼, ⨽, ⋆, ∗, ⁻¹, ǂ, ₊, ₋, ˣ, antiabs, antiabs2, geomabs
 
 # some shared presets
 
-for op ∈ (:(Base.:+),:(Base.:-),:(Base.:*),:⊘,:⊛,:∗,:⨼,:⨽,:contraction,:antidot,:veedot,:(LinearAlgebra.dot),:(Base.:|),:(Base.:(==)),:(Base.:<),:(Base.:>),:(Base.:<<),:(Base.:>>),:(Base.:>>>),:(Base.div),:(Base.rem),:(Base.:&))
+for op ∈ (:(Base.:+),:(Base.:-),:(Base.:*),:⊘,:⊛,:∗,:⨼,:⨽,:contraction,:expansion,:veedot,:(LinearAlgebra.dot),:(Base.:|),:(Base.:(==)),:(Base.:<),:(Base.:>),:(Base.:<<),:(Base.:>>),:(Base.:>>>),:(Base.div),:(Base.rem),:(Base.:&))
     @eval begin
         @inline $op(a::A,b::UniformScaling) where A<:TensorAlgebra = $op(a,Manifold(a)(b))
         @inline $op(a::UniformScaling,b::B) where B<:TensorAlgebra = $op(Manifold(b)(a),b)
@@ -260,7 +261,7 @@ const complementright = !
 const ⋆ = complementrighthodge
 const hodge = complementrighthodge
 
-const ⊖,⟑,times = wedgedot,wedgedot,wedgedot
+const ⊖,⟑,times,antidot,pseudodot = wedgedot,wedgedot,wedgedot,expansion,expansion
 @inline Base.:|(t::T) where T<:TensorAlgebra = hodge(t)
 @inline Base.:!(t::UniformScaling{T}) where T = T<:Bool ? (t.λ ? 1 : 0) : t.λ
 @inline Base.:/(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = a⟑Base.inv(b)
@@ -273,7 +274,7 @@ const ⊖,⟑,times = wedgedot,wedgedot,wedgedot
 @inline ⊗(a::A,b::B) where {A<:TensorAlgebra,B<:Complex} = a*b
 @inline ⊗(a::A,b::B) where {A<:Real,B<:TensorAlgebra} = a*b
 @inline ⊗(a::A,b::B) where {A<:Complex,B<:TensorAlgebra} = a*b
-Base.:∘(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = antidot(a,b)
+Base.:∘(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = expansion(a,b)
 
 for op ∈ (:(Base.:+),:(Base.:*),:wedgedot)
     @eval $op(t::T) where T<:TensorAlgebra = t
@@ -299,8 +300,8 @@ for base ∈ (2,10)
     @eval Base.$fe(t::T) where T<:TensorAlgebra = Base.exp(Base.log($base)*t)
 end
 
-@inline Base.cos(t::T) where T<:TensorAlgebra = Base.cosh(Manifold(t)(I)⟑t)
-@inline Base.sin(t::T) where T<:TensorAlgebra = (i=Manifold(t)(I);Base.:/(Base.sinh(i⟑t),i))
+@inline Base.cos(t::T) where T<:TensorAlgebra{V} where V = Base.cosh(V(I)⟑t)
+@inline Base.sin(t::T) where T<:TensorAlgebra{V} where V = (i=V(I);Base.:/(Base.sinh(i⟑t),i))
 @inline Base.tan(t::T) where T<:TensorAlgebra = Base.:/(Base.sin(t),Base.cos(t))
 @inline Base.cot(t::T) where T<:TensorAlgebra = Base.:/(Base.cos(t),Base.sin(t))
 @inline Base.sec(t::T) where T<:TensorAlgebra = Base.inv(Base.cos(t))
@@ -317,34 +318,43 @@ end
 @inline Base.acosh(t::T) where T<:TensorAlgebra{V} where V = Base.log(t+Base.sqrt(Base.:-(t⟑t,one(V))))
 @inline Base.atanh(t::T) where T<:TensorAlgebra{V} where V = Base.:/(Base.:-(Base.log(one(V)+t),Base.log(Base.:-(one(V),t))),2)
 @inline Base.acoth(t::T) where T<:TensorAlgebra{V} where V = Base.:/(Base.:-(Base.log(t+one(V)),Base.log(Base.:-(t,one(V)))),2)
-Base.asin(t::T) where T<:TensorAlgebra{V} where V = (i=Manifold(t)(I);Base.:-(i)*Base.log(i*t+Base.sqrt(Base.:-(one(V),t⟑t))))
-Base.acos(t::T) where T<:TensorAlgebra{V} where V = (i=Manifold(t)(I);Base.:-(i)*Base.log(t+i*Base.sqrt(Base.:-(one(V),t⟑t))))
-Base.atan(t::T) where T<:TensorAlgebra{V} where V = (i=Manifold(t)(I);it=i⟑t;Base.:/(Base.:-(i),2)*Base.:-(Base.log(one(V)+it),Base.log(Base.:-(one(V),it))))
-Base.acot(t::T) where T<:TensorAlgebra = (i=Manifold(t)(I);Base.:/(Base.:-(i),2)*Base.:-(Base.log(Base.:-(t,i)),Base.log(t+i)))
-Base.sinc(t::T) where T<:TensorAlgebra = iszero(t) ? one(Manifold(t)) : (x=(1π)*t;Base.:/(Base.sin(x),x))
-Base.cosc(t::T) where T<:TensorAlgebra = iszero(t) ? zero(Manifold(t)) : (x=(1π)*t; Base.:-(Base.:/(Base.cos(x),t), Base.:/(sin(x),(x⟑t))))
+Base.asin(t::T) where T<:TensorAlgebra{V} where V = (i=V(I);Base.:-(i)*Base.log(i*t+Base.sqrt(Base.:-(one(V),t⟑t))))
+Base.acos(t::T) where T<:TensorAlgebra{V} where V = (i=V(I);Base.:-(i)*Base.log(t+i*Base.sqrt(Base.:-(one(V),t⟑t))))
+Base.atan(t::T) where T<:TensorAlgebra{V} where V = (i=V(I);it=i⟑t;Base.:/(Base.:-(i),2)*Base.:-(Base.log(one(V)+it),Base.log(Base.:-(one(V),it))))
+Base.acot(t::T) where T<:TensorAlgebra{V} where V = (i=V(I);Base.:/(Base.:-(i),2)*Base.:-(Base.log(Base.:-(t,i)),Base.log(t+i)))
+Base.sinc(t::T) where T<:TensorAlgebra{V} where V = iszero(t) ? one(V) : (x=(1π)*t;Base.:/(Base.sin(x),x))
+Base.cosc(t::T) where T<:TensorAlgebra{V} where V = iszero(t) ? zero(V) : (x=(1π)*t; Base.:-(Base.:/(Base.cos(x),t), Base.:/(sin(x),(x⟑t))))
 
 # absolute value norm
 
 @inline Base.abs(t::T) where T<:TensorAlgebra = Base.sqrt(Base.abs2(t))
 @inline Base.abs2(t::T) where T<:TensorAlgebra = (a=(~t)⟑t; isscalar(a) ? scalar(a) : a)
 @inline Base.abs2(t::T) where T<:TensorGraded = contraction(t,t)
-@inline geomabs(t::T) where T<:TensorAlgebra = Base.abs(t)+antiabs(t)
+@inline geomabs(t::T) where T<:TensorAlgebra = Base.abs(t)+pseudoabs(t)
 @inline norm(z) = LinearAlgebra.norm(z)
 @inline LinearAlgebra.norm(t::T) where T<:TensorAlgebra = norm(value(t))
 @inline unit(t::T) where T<:Number = Base.:/(t,Base.abs(t))
 @inline unitize(t::T) where T<:Number = Base.:/(t,value(antiabs(t)))
+@inline unitnorm(t::T) where T<:Number = Base.:/(t,norm(geomabs(t)))
 @inline Base.iszero(t::T) where T<:TensorAlgebra = LinearAlgebra.norm(t) ≈ 0
 @inline Base.isone(t::T) where T<:TensorAlgebra = LinearAlgebra.norm(t)≈value(scalar(t))≈1
 @inline LinearAlgebra.dot(a::A,b::B) where {A<:TensorGraded,B<:TensorGraded} = contraction(a,b)
 
-for fun ∈ (:abs,:abs2,:sqrt,:cbrt,:exp,:log)
-    ant = Symbol(:anti,fun)
+macro pseudo(fun)
+    ant = Symbol(:pseudo,fun.args[1])
+    com = [:(complementright($(esc(fun.args[t])))) for t ∈ 2:length(fun.args)]
+    return Expr(:function,Expr(:call,esc(ant),esc.(fun.args[2:end])...),
+        Expr(:block,:(complementleft($(esc(fun.args[1]))($(com...))))))
+end
+
+for fun ∈ (:abs,:abs2,:sqrt,:cbrt,:exp,:log,:inv,:sin,:cos,:tan,:sinh,:cosh,:tanh)
+    ant = Symbol(:pseudo,fun)
     @eval begin
         export $ant
         @inline $ant(t::T) where T<:TensorAlgebra = complementleft(Base.$fun(complementright(t)))
     end
 end
+const antiabs,antiabs2 = pseudoabs,pseudoabs2
 
 # postfix operators
 
