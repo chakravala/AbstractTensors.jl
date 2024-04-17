@@ -225,16 +225,16 @@ import AbstractLattices: ∧, ∨, wedge, vee
 
 # extended compatibility interface
 
-export TensorAlgebra, Manifold, TensorGraded, Distribution, expansion # metric, antimetric
+export TensorAlgebra, Manifold, TensorGraded, Distribution, expansion, metric, pseudometric
 export Scalar, GradedVector, Bivector, Trivector, contraction, wedgedot, veedot, @pseudo
-export istensor, ismanifold, isterm, isgraded, ismixed, rank, mdims, values, hodge
-export scalar, isscalar, vector, isvector, bivector, isbivector, volume, isvolume
+export istensor, ismanifold, isterm, isgraded, ismixed, rank, mdims, values, sandwich
+export scalar, isscalar, vector, isvector, bivector, isbivector, volume, isvolume,hodge
 export value, valuetype, interop, interform, involute, unit, unitize, unitnorm, even, odd
 export ⟑, ⊘, ⊖, ⊗, ⊛, ⊙, ⊠, ×, ⨼, ⨽, ⋆, ∗, ⁻¹, ǂ, ₊, ₋, ˣ, antiabs, antiabs2, geomabs
 
 # some shared presets
 
-for op ∈ (:(Base.:+),:(Base.:-),:(Base.:*),:⊘,:⊛,:∗,:⨼,:⨽,:contraction,:expansion,:veedot,:(LinearAlgebra.dot),:(Base.:|),:(Base.:(==)),:(Base.:<),:(Base.:>),:(Base.:<<),:(Base.:>>),:(Base.:>>>),:(Base.div),:(Base.rem),:(Base.:&))
+for op ∈ (:(Base.:+),:(Base.:-),:(Base.:*),:sandwich,:⊛,:∗,:⨼,:⨽,:contraction,:expansion,:veedot,:(LinearAlgebra.dot),:(Base.:|),:(Base.:(==)),:(Base.:<),:(Base.:>),:(Base.:<<),:(Base.:>>),:(Base.:>>>),:(Base.div),:(Base.rem),:(Base.:&))
     @eval begin
         @inline $op(a::A,b::UniformScaling) where A<:TensorAlgebra = $op(a,Manifold(a)(b))
         @inline $op(a::UniformScaling,b::B) where B<:TensorAlgebra = $op(Manifold(b)(a),b)
@@ -246,7 +246,7 @@ Base.:-(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = minus(a,b)
 Base.:*(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = times(a,b)
 LinearAlgebra.dot(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = contraction(a,b)
 Base.:(==)(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = equal(a,b)
-for op ∈ (:plus,:minus,:wedgedot,:contraction,:equal,:⊘,:⊛,:∗,:(Base.:|),:(Base.:<),:(Base.:>),:(Base.:<<),:(Base.:>>),:(Base.:>>>),:(Base.div),:(Base.rem),:(Base.:&))
+for op ∈ (:plus,:minus,:wedgedot,:contraction,:equal,:sandwich,:⊛,:∗,:(Base.:|),:(Base.:<),:(Base.:>),:(Base.:<<),:(Base.:>>),:(Base.:>>>),:(Base.div),:(Base.rem),:(Base.:&))
     @eval @inline $op(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = interop($op,a,b)
 end
 
@@ -260,7 +260,7 @@ const complement = !
 const complementright = !
 const ⋆ = complementrighthodge
 const hodge = complementrighthodge
-
+const ⊘ = sandwich
 const ⊖,⟑,times,antidot,pseudodot = wedgedot,wedgedot,wedgedot,expansion,expansion
 @inline Base.:|(t::T) where T<:TensorAlgebra = hodge(t)
 @inline Base.:!(t::UniformScaling{T}) where T = T<:Bool ? (t.λ ? 1 : 0) : t.λ
@@ -334,7 +334,7 @@ Base.cosc(t::T) where T<:TensorAlgebra{V} where V = iszero(t) ? zero(V) : (x=(1�
 @inline norm(z) = LinearAlgebra.norm(z)
 @inline LinearAlgebra.norm(t::T) where T<:TensorAlgebra = norm(value(t))
 @inline unit(t::T) where T<:Number = Base.:/(t,Base.abs(t))
-@inline unitize(t::T) where T<:Number = Base.:/(t,value(antiabs(t)))
+@inline unitize(t::T) where T<:Number = Base.:/(t,value(pseudoabs(t)))
 @inline unitnorm(t::T) where T<:Number = Base.:/(t,norm(geomabs(t)))
 @inline Base.iszero(t::T) where T<:TensorAlgebra = LinearAlgebra.norm(t) ≈ 0
 @inline Base.isone(t::T) where T<:TensorAlgebra = LinearAlgebra.norm(t)≈value(scalar(t))≈1
@@ -354,7 +354,8 @@ for fun ∈ (:abs,:abs2,:sqrt,:cbrt,:exp,:log,:inv,:sin,:cos,:tan,:sinh,:cosh,:t
         @inline $ant(t::T) where T<:TensorAlgebra = complementleft(Base.$fun(complementright(t)))
     end
 end
-const antiabs,antiabs2 = pseudoabs,pseudoabs2
+const antiabs,antiabs2,pseudometric = pseudoabs,pseudoabs2,antimetric
+pseudosandwich(a,b) = complementleft(sandwich(complementright(a),complementright(b)))
 
 # postfix operators
 
