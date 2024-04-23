@@ -11,7 +11,7 @@ AbstractLattices = "398f06c4-4d28-53ec-89ca-5b2656b7603d"
 
 [compat]
 julia = "1"
-AbstractLattices = "v0.2"
+AbstractLattices = "0.2,0.3"
 StaticVectors = "1"
 
 [extras]
