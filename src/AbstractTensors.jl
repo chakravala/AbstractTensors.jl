@@ -25,79 +25,79 @@ module AbstractTensors
 # universal root Tensor type, Manifold
 
 """
-    TensorAlgebra{V} <: Number
+    TensorAlgebra{V,T} <: Number
 
-Universal root tensor type with `Manifold` instance parameter `V`.
+Universal root tensor type with `Manifold` instance `V` with scalar field `T`.
 """
-abstract type TensorAlgebra{V} <: Number end
+abstract type TensorAlgebra{V,T} <: Number end
 TensorAlgebra{V}(t::TensorAlgebra{V}) where V = t
 TensorAlgebra{V}(t::TensorAlgebra{W}) where {V,W} = (V∪W)(t)
 Base.@pure istensor(t::T) where T<:TensorAlgebra = true
 Base.@pure istensor(t) = false
 
 """
-    Manifold{V} <: TensorAlgebra{V}
+    Manifold{V,T} <: TensorAlgebra{V,T}
 
-Basis parametrization locally homeomorphic to `ℝ^n` product topology.
+Basis parametrization locally homeomorphic to `T^n` product topology.
 """
-abstract type Manifold{V} <: TensorAlgebra{V} end
+abstract type Manifold{V,T} <: TensorAlgebra{V,T} end
 Base.@pure ismanifold(t::T) where T<:Manifold = true
 Base.@pure ismanifold(t) = false
 
 """
-    TensorGraded{V,G} <: Manifold{V} <: TensorAlgebra
+    TensorGraded{V,G,T} <: Manifold{V,T} <: TensorAlgebra
 
-Graded elements of a `TensorAlgebra` in a `Manifold` topology.
+Grade `G` elements of a `Manifold` instance `V` with scalar field `T`.
 """
-abstract type TensorGraded{V,G} <: Manifold{V} end
+abstract type TensorGraded{V,G,T} <: Manifold{V,T} end
 const TAG = (:TensorAlgebra,:TensorGraded)
 Base.@pure isgraded(t::T) where T<:TensorGraded = true
 Base.@pure isgraded(t) = false
 
 """
-    Scalar{V} <: TensorGraded{V,0}
+    Scalar{V,T} <: TensorGraded{V,0,T}
 
-Graded scalar elements of a `TensorAlgebra` in a `Manifold` topology.
+Graded `scalar` elements of a `Manifold` instance `V` with scalar field `T`.
 """
-const Scalar{V} = TensorGraded{V,0}
-
-"""
-    GradedVector{V} <: TensorGraded{V,1}
-
-Graded vector elements of a `TensorAlgebra` in a `Manifold` topology.
-"""
-const GradedVector{V} = TensorGraded{V,1}
+const Scalar{V,T} = TensorGraded{V,0,T}
 
 """
-    Bivector{V} <: TensorGraded{V,2}
+    GradedVector{V,T} <: TensorGraded{V,1,T}
 
-Graded bivector elements of a `TensorAlgebra` in a `Manifold` topology.
+Graded `vector` elements of a `Manifold` instance `V` with scalar field `T`.
 """
-const Bivector{V} = TensorGraded{V,2}
-
-"""
-    Trivector{V} <: TensorGraded{V,3}
-
-Graded trivector elements of a `TensorAlgebra` in a `Manifold` topology.
-"""
-const Trivector{V} = TensorGraded{V,3}
+const GradedVector{V,T} = TensorGraded{V,1,T}
 
 """
-    TensorTerm{V,G} <: TensorGraded{V,G}
+    Bivector{V,T} <: TensorGraded{V,2,T}
 
-Terms of a `TensorAlgebra` having a single coefficient.
+Graded `bivector` elements of a `Manifold` instance `V` with scalar field `T`.
 """
-abstract type TensorTerm{V,G} <: TensorGraded{V,G} end
+const Bivector{V,T} = TensorGraded{V,2,T}
+
+"""
+    Trivector{V,T} <: TensorGraded{V,3,T}
+
+Graded `trivector` elements of a `Manifold` instance `V` with scalar field `T`.
+"""
+const Trivector{V,T} = TensorGraded{V,3,T}
+
+"""
+    TensorTerm{V,G,T} <: TensorGraded{V,G,T}
+
+Single coefficient for grade `G` of a `Manifold` instance `V` with scalar field `T`.
+"""
+abstract type TensorTerm{V,G,T} <: TensorGraded{V,G,T} end
 Base.@pure isterm(t::T) where T<:TensorTerm = true
 Base.@pure isterm(t) = false
 Base.isfinite(b::T) where T<:TensorTerm = isfinite(value(b))
 
 """
-    TensorMixed{V} <: TensorAlgebra{V}
+    TensorMixed{V,T} <: TensorAlgebra{V,T}
 
-Elements of `TensorAlgebra` having non-homogenous grade.
+Elements of `Manifold` instance `V` having non-homogenous grade with scalar field `T`.
 """
-abstract type TensorMixed{V} <: TensorAlgebra{V} end
+abstract type TensorMixed{V,T} <: TensorAlgebra{V,T} end
 Base.@pure ismixed(t::T) where T<:TensorMixed = true
 Base.@pure ismixed(t) = false
 
@@ -158,21 +158,22 @@ const volume = pseudoscalar
 @inline isvolume(t::T) where T<:TensorGraded = rank(t) == mdims(t) || iszero(t)
 
 """
-    values(::TensorAlgebra)
+    value(::TensorAlgebra)
 
 Returns the internal `Values` representation of a `TensorAlgebra` element.
 """
-values(t::T) where T<:Number = t
-values(t::T) where T<:AbstractArray = t
-const value = values
+value(t::T) where T<:Number = t
+value(t::T) where T<:AbstractArray = t
 
 """
-    valuetype(t::TensorAlgebra)
+    valuetype(t::TensorAlgebra{V,T}) where {V,T} = T
 
 Returns type of a `TensorAlgebra` element value's internal representation.
 """
+Base.@pure valuetype(::T) where T<:TensorAlgebra{V,K} where V where K = K
+Base.@pure valuetype(::Type{<:TensorAlgebra{V,T} where V}) where T = T
 Base.@pure valuetype(::T) where T<:Number = T
-#Base.@pure valuetype(::T) where T<:TensorAlgebra{V,𝕂} where V where 𝕂 = 𝕂
+Base.@pure valuetype(::Type{T}) where T<:Number = T
 
 Base.real(::Type{T}) where T<:TensorAlgebra = real(valuetype(T))
 Base.rtoldefault(::Type{T}) where T<:TensorAlgebra = Base.rtoldefault(valuetype(T))
@@ -227,7 +228,7 @@ import AbstractLattices: ∧, ∨, wedge, vee
 
 export TensorAlgebra, Manifold, TensorGraded, Distribution, expansion, metric, pseudometric
 export Scalar, GradedVector, Bivector, Trivector, contraction, wedgedot, veedot, @pseudo
-export istensor, ismanifold, isterm, isgraded, ismixed, rank, mdims, values, sandwich
+export istensor, ismanifold, isterm, isgraded, ismixed, rank, mdims, sandwich, antimetric
 export scalar, isscalar, vector, isvector, bivector, isbivector, volume, isvolume,hodge
 export value, valuetype, interop, interform, involute, unit, unitize, unitnorm, even, odd
 export ⟑, ⊘, ⊖, ⊗, ⊛, ⊙, ⊠, ×, ⨼, ⨽, ⋆, ∗, ⁻¹, ǂ, ₊, ₋, ˣ, antiabs, antiabs2, geomabs
@@ -330,16 +331,58 @@ Base.cosc(t::T) where T<:TensorAlgebra{V} where V = iszero(t) ? zero(V) : (x=(1�
 @inline Base.abs(t::T) where T<:TensorAlgebra = Base.sqrt(Base.abs2(t))
 @inline Base.abs2(t::T) where T<:TensorAlgebra = (a=(~t)⟑t; isscalar(a) ? scalar(a) : a)
 @inline Base.abs2(t::T) where T<:TensorGraded = contraction(t,t)
-@inline geomabs(t::T) where T<:TensorAlgebra = Base.abs(t)+pseudoabs(t)
 @inline norm(z) = LinearAlgebra.norm(z)
 @inline LinearAlgebra.norm(t::T) where T<:TensorAlgebra = norm(value(t))
-@inline unit(t::T) where T<:Number = Base.:/(t,Base.abs(t))
-@inline unitize(t::T) where T<:Number = Base.:/(t,value(pseudoabs(t)))
-@inline unitnorm(t::T) where T<:Number = Base.:/(t,norm(geomabs(t)))
 @inline Base.iszero(t::T) where T<:TensorAlgebra = LinearAlgebra.norm(t) ≈ 0
 @inline Base.isone(t::T) where T<:TensorAlgebra = LinearAlgebra.norm(t)≈value(scalar(t))≈1
 @inline LinearAlgebra.dot(a::A,b::B) where {A<:TensorGraded,B<:TensorGraded} = contraction(a,b)
 
+"""
+    geomabs(t::TensorAlgebra)
+
+Geometric norm defined as `geomabs(t) = abs(t) + pseudoabs(t)`.
+"""
+@inline geomabs(t::T) where T<:TensorAlgebra = Base.abs(t)+pseudoabs(t)
+
+"""
+    unit(t::Number)
+
+Normalization defined as `unit(t) = t/abs(t)`.
+"""
+@inline unit(t::T) where T<:Number = Base.:/(t,Base.abs(t))
+
+"""
+    unitize(t::TensorAlgebra)
+
+Pseudo-normalization defined as `unitize(t) = t/value(pseudoabs(t))`.
+"""
+@inline unitize(t::T) where T<:Number = Base.:/(t,value(pseudoabs(t)))
+
+"""
+    unitnorm(t::TensorAlgebra)
+
+Geometric normalization defined as `unitnorm(t) = t/norm(geomabs(t))`.
+"""
+@inline unitnorm(t::T) where T<:Number = Base.:/(t,norm(geomabs(t)))
+
+"""
+    @pseudo fun(args...)
+
+Use the macro `@pseudo` to make a pseudoscalar `complement` variant of any functions:
+
+```Julia
+julia> @pseudo myfun(x)
+pseudomyfun (generic function with 1 method)
+```
+
+Now `pseudomyfun(x) = complementleft(myfun(complementright(x)))` is defined.
+
+```Julia
+julia> @pseudo myproduct(a,b)
+pseudomyproduct (generic function with 1 method)
+```
+Now `pseudomyproduct(a,b) = complementleft(myproduct(!a,!b))` is defined.
+"""
 macro pseudo(fun)
     ant = Symbol(:pseudo,fun.args[1])
     com = [:(complementright($(esc(fun.args[t])))) for t ∈ 2:length(fun.args)]
@@ -349,13 +392,32 @@ end
 
 for fun ∈ (:abs,:abs2,:sqrt,:cbrt,:exp,:log,:inv,:sin,:cos,:tan,:sinh,:cosh,:tanh)
     ant = Symbol(:pseudo,fun)
+    str = """
+    $ant(t::TensorAlgebra)
+
+Complemented `$fun` defined as `complementleft($fun(complementright(t)))`.
+    """
     @eval begin
         export $ant
+        @doc $str $ant
         @inline $ant(t::T) where T<:TensorAlgebra = complementleft(Base.$fun(complementright(t)))
     end
 end
 const antiabs,antiabs2,pseudometric = pseudoabs,pseudoabs2,antimetric
-pseudosandwich(a,b) = complementleft(sandwich(complementright(a),complementright(b)))
+
+"""
+    pseudosandwich(x::TensorAlgebra,R::TensorAlgebra)
+
+Defined as `complementleft(sandwich(complementright(x),complementright(R)))`.
+"""
+pseudosandwich(x,R) = complementleft(sandwich(complementright(x),complementright(R)))
+
+"""
+    antisandwich(x::TensorAlgebra,R::TensorAlgebra)
+
+Defined as `complementleft(complementright(R)>>>complementright(x))`.
+"""
+antisandwich(R,x) = complementleft(complementright(R)>>>complementright(x))
 
 # postfix operators
 
@@ -431,14 +493,7 @@ const RealArray{N,T<:Real} = AbstractArray{T,N}
 
 export TupleVector, Values, Variables, FixedVector
 
-if haskey(ENV,"STATICJL")
-    import StaticArrays: SVector, MVector, SizedVector, StaticVector, _diff
-    const Values,Variables,FixedVector,TupleVector = SVector,MVector,SizedVector,StaticVector
-    Base.@pure countvalues(a::Int,b::Int) = Values{max(0,b-a+1),Int}(a:b...)
-    Base.@pure evenvalues(a::Int,b::Int) = Values{((b-a)÷2)+1,Int}(a:2:b...)
-else
-    import StaticVectors: Values, Variables, FixedVector, TupleVector, _diff
-    import StaticVectors: SVector, MVector, SizedVector, countvalues, evenvalues
-end
+import StaticVectors: Values, Variables, FixedVector, TupleVector, _diff
+import StaticVectors: SVector, MVector, SizedVector, countvalues, evenvalues
 
 end # module

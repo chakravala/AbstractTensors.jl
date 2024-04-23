@@ -2,7 +2,7 @@ using AbstractTensors
 using Test, LinearAlgebra, DirectSum
 
 # example data
-struct SpecialTensor{V} <: TensorAlgebra{V} end
+struct SpecialTensor{V} <: TensorAlgebra{V,Float64} end
 a,b = SpecialTensor{ℝ}(), SpecialTensor{ℝ'}()
 @test ndims(+(a)) == ndims(b)
 
