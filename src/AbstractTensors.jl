@@ -404,6 +404,7 @@ Complemented `$fun` defined as `complementleft($fun(complementright(t)))`.
     end
 end
 const antiabs,antiabs2,pseudometric = pseudoabs,pseudoabs2,antimetric
+export pseudosandwich, antisandwich
 
 """
     pseudosandwich(x::TensorAlgebra,R::TensorAlgebra)
