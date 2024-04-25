@@ -132,6 +132,23 @@ Base.@pure mdims(M::T) where T<:TensorAlgebra = mdims(Manifold(M))
 Base.@pure mdims(M::Type{T}) where T<:TensorAlgebra = mdims(Manifold(M))
 Base.@pure mdims(M::Int) = M
 
+"""
+    tdims(t::TensorAlgebra{V})
+
+Dimensionality of the superalgebra of `V` for that `TensorAlgebra`.
+"""
+Base.@pure tdims(M::T) where T<:TensorAlgebra = 1<<mdims(M)
+Base.@pure tdims(M::Type{T}) where T<:TensorAlgebra = 1<<mdims(M)
+Base.@pure tdims(M::Int) = 1<<M
+
+"""
+    gdims(t::TensorGraded{V,G})
+
+Dimensionality of the grade `G` of `V` for that `TensorAlgebra`.
+"""
+Base.@pure gdims(t::TensorGraded{V,G}) where {V,G} = gdims(mdims(t),G)
+Base.@pure gdims(N,G) = Base.binomial(N,G)
+
 for (part,G) ∈ ((:scalar,0),(:vector,1),(:bivector,2),(:trivector,3))
     ispart = Symbol(:is,part)
     str = """
@@ -154,7 +171,7 @@ Return the pseudoscalar (full rank) part of any `TensorAlgebra` element.
 """
 @inline pseudoscalar(t::T) where T<:Manifold = t
 const volume = pseudoscalar
-@inline volume(t::T) where T<:TensorGraded{V,G} where {V,G} = G == mdims(V) ? t : zero(V)
+@inline volume(t::T) where T<:TensorGraded{V,G} where {V,G} = G == mdims(t) ? t : zero(V)
 @inline isvolume(t::T) where T<:TensorGraded = rank(t) == mdims(t) || iszero(t)
 
 """
@@ -226,10 +243,10 @@ import AbstractLattices: ∧, ∨, wedge, vee
 
 # extended compatibility interface
 
-export TensorAlgebra, Manifold, TensorGraded, Distribution, expansion, metric, pseudometric
-export Scalar, GradedVector, Bivector, Trivector, contraction, wedgedot, veedot, @pseudo
-export istensor, ismanifold, isterm, isgraded, ismixed, rank, mdims, sandwich, antimetric
-export scalar, isscalar, vector, isvector, bivector, isbivector, volume, isvolume,hodge
+export TensorAlgebra, Manifold, TensorGraded, Scalar, GradedVector, Bivector, Trivector
+export wedgedot, veedot, contraction, expansion, metric, pseudometric, antimetric, @pseudo
+export istensor, ismanifold, isterm, isgraded, ismixed, rank, mdims, tdims, gdims, sandwich
+export scalar, isscalar, vector, isvector, bivector, isbivector, volume, isvolume, hodge
 export value, valuetype, interop, interform, involute, unit, unitize, unitnorm, even, odd
 export ⟑, ⊘, ⊖, ⊗, ⊛, ⊙, ⊠, ×, ⨼, ⨽, ⋆, ∗, ⁻¹, ǂ, ₊, ₋, ˣ, antiabs, antiabs2, geomabs
 
