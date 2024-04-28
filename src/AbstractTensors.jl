@@ -147,6 +147,7 @@ Base.@pure tdims(M::Int) = 1<<M
 Dimensionality of the grade `G` of `V` for that `TensorAlgebra`.
 """
 Base.@pure gdims(t::TensorGraded{V,G}) where {V,G} = gdims(mdims(t),G)
+Base.@pure gdims(t::Type{T}) where {V,G,T<:TensorGraded{V,G}} = gdims(mdims(t),G)
 Base.@pure gdims(N,G) = Base.binomial(N,G)
 
 for (part,G) ∈ ((:scalar,0),(:vector,1),(:bivector,2),(:trivector,3))
@@ -191,6 +192,7 @@ Base.@pure valuetype(::T) where T<:TensorAlgebra{V,K} where V where K = K
 Base.@pure valuetype(::Type{<:TensorAlgebra{V,T} where V}) where T = T
 Base.@pure valuetype(::T) where T<:Number = T
 Base.@pure valuetype(::Type{T}) where T<:Number = T
+const valtype = valuetype; export valtype
 
 Base.real(::Type{T}) where T<:TensorAlgebra = real(valuetype(T))
 Base.rtoldefault(::Type{T}) where T<:TensorAlgebra = Base.rtoldefault(valuetype(T))
