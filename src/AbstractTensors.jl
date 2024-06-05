@@ -246,7 +246,7 @@ import AbstractLattices: ∧, ∨, wedge, vee
 # extended compatibility interface
 
 export TensorAlgebra, Manifold, TensorGraded, Scalar, GradedVector, Bivector, Trivector
-export wedgedot, veedot, contraction, expansion, metric, pseudometric, antimetric, @pseudo
+export wedgedot, veedot, contraction, expansion, metric, pseudometric, cometric, @pseudo
 export istensor, ismanifold, isterm, isgraded, ismixed, rank, mdims, tdims, gdims, sandwich
 export scalar, isscalar, vector, isvector, bivector, isbivector, volume, isvolume, hodge
 export value, valuetype, interop, interform, involute, unit, unitize, unitnorm, even, odd
@@ -254,7 +254,7 @@ export ⟑, ⊘, ⊖, ⊗, ⊛, ⊙, ⊠, ×, ⨼, ⨽, ⋆, ∗, ⁻¹, ǂ, ₊
 
 # some shared presets
 
-for op ∈ (:(Base.:+),:(Base.:-),:(Base.:*),:sandwich,:⊛,:∗,:⨼,:⨽,:contraction,:expansion,:veedot,:(LinearAlgebra.dot),:(Base.:|),:(Base.:(==)),:(Base.:<),:(Base.:>),:(Base.:<<),:(Base.:>>),:(Base.:>>>),:(Base.div),:(Base.rem),:(Base.:&))
+for op ∈ (:(Base.:+),:(Base.:-),:(Base.:*),:sandwich,:⊛,:∗,:⨼,:⨽,:contraction,:contraction_metric,:expansion,:veedot,:wedgedot,:wedgedot_metric,:(LinearAlgebra.dot),:(Base.:|),:(Base.:(==)),:(Base.:<),:(Base.:>),:(Base.:<<),:(Base.:>>),:(Base.:>>>),:(Base.div),:(Base.rem),:(Base.:&))
     @eval begin
         @inline $op(a::A,b::UniformScaling) where A<:TensorAlgebra = $op(a,Manifold(a)(b))
         @inline $op(a::UniformScaling,b::B) where B<:TensorAlgebra = $op(Manifold(b)(a),b)
@@ -266,13 +266,13 @@ Base.:-(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = minus(a,b)
 Base.:*(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = times(a,b)
 LinearAlgebra.dot(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = contraction(a,b)
 Base.:(==)(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = equal(a,b)
-for op ∈ (:plus,:minus,:wedgedot,:contraction,:equal,:sandwich,:⊛,:∗,:(Base.:|),:(Base.:<),:(Base.:>),:(Base.:<<),:(Base.:>>),:(Base.:>>>),:(Base.div),:(Base.rem),:(Base.:&))
+for op ∈ (:plus,:minus,:wedgedot,:wedgedot_metric,:contraction,:contraction_metric,:equal,:sandwich,:⊛,:∗,:(Base.:|),:(Base.:<),:(Base.:>),:(Base.:<<),:(Base.:>>),:(Base.:>>>),:(Base.div),:(Base.rem),:(Base.:&))
     @eval @inline $op(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = interop($op,a,b)
 end
 
 for op ∈ (:(Base.:!),:complementrighthodge)
     for T ∈ (:Real,:Complex)
-        @eval @inline $op(t::T) where T<:$T = UniformScaling(t)
+        @eval @inline $op(t::T,g=nothing) where T<:$T = UniformScaling(t)
     end
 end
 
@@ -284,12 +284,22 @@ const ⊘ = sandwich
 const ⊖,⟑,times,antidot,pseudodot = wedgedot,wedgedot,wedgedot,expansion,expansion
 @inline Base.:|(t::T) where T<:TensorAlgebra = hodge(t)
 @inline Base.:!(t::UniformScaling{T}) where T = T<:Bool ? (t.λ ? 1 : 0) : t.λ
-@inline Base.:/(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = a⟑Base.inv(b)
-@inline Base.:/(a::UniformScaling,b::B) where B<:TensorAlgebra = Manifold(b)(a)⟑Base.inv(b)
-@inline Base.:/(a::A,b::UniformScaling) where A<:TensorAlgebra = a⟑Base.inv(Manifold(a)(b))
-@inline Base.:\(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = Base.inv(a)⟑b
-@inline Base.:\(a::UniformScaling,b::B) where B<:TensorAlgebra = Base.inv(Manifold(b)(a))⟑b
-@inline Base.:\(a::A,b::UniformScaling) where A<:TensorAlgebra = Base.inv(a)⟑Manifold(a)(b)
+
+for (op,logm,field) ∈ ((:⟑,:(Base.log),false),(:wedgedot_metric,:log_metric,true)); args = field ? (:g,) : ()
+    @eval begin
+        @inline Base.:/(a::A,b::B,$(args...)) where {A<:TensorAlgebra,B<:TensorAlgebra} = $op(a,Base.inv(b,$(args...)),$(args...))
+        @inline Base.:/(a::UniformScaling,b::B,$(args...)) where B<:TensorAlgebra = $op(Manifold(b)(a),Base.inv(b,$(args...)),$(args...))
+        @inline Base.:/(a::A,b::UniformScaling,$(args...)) where A<:TensorAlgebra = $op(a,Base.inv(Manifold(a)(b),$(args...)),$(args...))
+        @inline Base.:\(a::A,b::B,$(args...)) where {A<:TensorAlgebra,B<:TensorAlgebra} = $op(Base.inv(a,$(args...)),b,$(args...))
+        @inline Base.:\(a::UniformScaling,b::B,$(args...)) where B<:TensorAlgebra = $op(Base.inv(Manifold(b)(a),$(args...)),b,$(args...))
+        @inline Base.:\(a::A,b::UniformScaling,$(args...)) where A<:TensorAlgebra = $op(Base.inv(a,$(args...)),Manifold(a)(b),$(args...))
+        @inline Base.:^(b::S,t::T,$(args...)) where {S<:Number,T<:TensorAlgebra} = Base.exp($op(t,$logm(b,$(args...)),$(args...)),$(args...))
+        @inline Base.:^(a::A,b::UniformScaling,$(args...)) where A<:TensorAlgebra = Base.:^(a,Manifold(a)(b),$(args...))
+        @inline Base.:^(a::UniformScaling,b::B,$(args...)) where B<:TensorAlgebra = Base.:^(Manifold(b)(a),b,$(args...))
+        @inline Base.exp(t::T,$(args...)) where T<:TensorAlgebra{V} where V = one(V)+Base.expm1(t,$(args...))
+        @inline $logm(b,t::T,$(args...)) where T<:TensorAlgebra = $logm(t,$(args...))/$logm(b,$(args...))
+    end
+end
 @inline ⊗(a::A,b::B) where {A<:TensorAlgebra,B<:Real} = a*b
 @inline ⊗(a::A,b::B) where {A<:TensorAlgebra,B<:Complex} = a*b
 @inline ⊗(a::A,b::B) where {A<:Real,B<:TensorAlgebra} = a*b
@@ -299,7 +309,7 @@ Base.:∘(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = expansion(a,b)
 for op ∈ (:(Base.:+),:(Base.:*),:wedgedot)
     @eval $op(t::T) where T<:TensorAlgebra = t
 end
-for op ∈ (:⊙,:⊠,:¬,:⋆,:clifford,:basis,:complementleft,:complementlefthodge,:complementleftanti,:complementrightanti,:metric,:antimetric,:veedot)
+for op ∈ (:⊙,:⊠,:¬,:⋆,:clifford,:basis,:complementleft,:complementlefthodge,:complementleftanti,:complementrightanti,:metric,:cometric)
     @eval function $op end
 end
 for op ∈ (:scalar,:involute,:even)
@@ -307,12 +317,16 @@ for op ∈ (:scalar,:involute,:even)
 end
 odd(::T) where T<:Real = 0
 LinearAlgebra.cross(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = hodge(∧(a,b))
-
-@inline Base.exp(t::T) where T<:TensorAlgebra{V} where V = one(V)+Base.expm1(t)
-@inline Base.log(b,t::T) where T<:TensorAlgebra = Base.log(t)/Base.log(b)
-@inline Base.:^(b::S,t::T) where {S<:Number,T<:TensorAlgebra} = Base.exp(t*Base.log(b))
-@inline Base.:^(a::A,b::UniformScaling) where A<:TensorAlgebra = Base.:^(a,Manifold(a)(b))
-@inline Base.:^(a::UniformScaling,b::B) where B<:TensorAlgebra = Base.:^(Manifold(b)(a),b)
+wedgedot(a,b) = Base.:*(a,b)
+contraction(a,b) = LinearAlgebra.dot(a,b)
+wedgedot_metric(a::Real,b,g) = Base.:*(a,b)
+wedgedot_metric(a,b::Real,g) = Base.:*(a,b)
+wedgedot_metric(a::Real,b::Real,g) = Base.:*(a,b)
+wedgedot_metric(a::Complex,b,g) = Base.:*(a,b)
+wedgedot_metric(a,b::Complex,g) = Base.:*(a,b)
+wedgedot_metric(a::Complex,b::Complex,g) = Base.:*(a,b)
+contraction_metric(a::Real,b::Real,g) = contraction(a,b)
+contraction_metric(a::Complex,b::Complex,g) = contraction(a,b)
 
 for base ∈ (2,10)
     fl,fe = (Symbol(:log,base),Symbol(:exp,base))
@@ -320,36 +334,42 @@ for base ∈ (2,10)
     @eval Base.$fe(t::T) where T<:TensorAlgebra = Base.exp(Base.log($base)*t)
 end
 
-@inline Base.cos(t::T) where T<:TensorAlgebra{V} where V = Base.cosh(V(I)⟑t)
-@inline Base.sin(t::T) where T<:TensorAlgebra{V} where V = (i=V(I);Base.:/(Base.sinh(i⟑t),i))
-@inline Base.tan(t::T) where T<:TensorAlgebra = Base.:/(Base.sin(t),Base.cos(t))
-@inline Base.cot(t::T) where T<:TensorAlgebra = Base.:/(Base.cos(t),Base.sin(t))
-@inline Base.sec(t::T) where T<:TensorAlgebra = Base.inv(Base.cos(t))
-@inline Base.csc(t::T) where T<:TensorAlgebra = Base.inv(Base.sin(t))
-@inline Base.asec(t::T) where T<:TensorAlgebra = Base.acos(Base.inv(t))
-@inline Base.acsc(t::T) where T<:TensorAlgebra = Base.asin(Base.inv(t))
-@inline Base.sech(t::T) where T<:TensorAlgebra = Base.inv(Base.cosh(t))
-@inline Base.csch(t::T) where T<:TensorAlgebra = Base.inv(Base.sinh(t))
-@inline Base.asech(t::T) where T<:TensorAlgebra = Base.acosh(Base.inv(t))
-@inline Base.acsch(t::T) where T<:TensorAlgebra = Base.asinh(Base.inv(t))
-@inline Base.tanh(t::T) where T<:TensorAlgebra = Base.:/(Base.sinh(t),Base.cosh(t))
-@inline Base.coth(t::T) where T<:TensorAlgebra = Base.:/(Base.cosh(t),Base.sinh(t))
-@inline Base.asinh(t::T) where T<:TensorAlgebra{V} where V = Base.log(t+Base.sqrt(one(V)+(t⟑t)))
-@inline Base.acosh(t::T) where T<:TensorAlgebra{V} where V = Base.log(t+Base.sqrt(Base.:-(t⟑t,one(V))))
-@inline Base.atanh(t::T) where T<:TensorAlgebra{V} where V = Base.:/(Base.:-(Base.log(one(V)+t),Base.log(Base.:-(one(V),t))),2)
-@inline Base.acoth(t::T) where T<:TensorAlgebra{V} where V = Base.:/(Base.:-(Base.log(t+one(V)),Base.log(Base.:-(t,one(V)))),2)
-Base.asin(t::T) where T<:TensorAlgebra{V} where V = (i=V(I);Base.:-(i)*Base.log(i*t+Base.sqrt(Base.:-(one(V),t⟑t))))
-Base.acos(t::T) where T<:TensorAlgebra{V} where V = (i=V(I);Base.:-(i)*Base.log(t+i*Base.sqrt(Base.:-(one(V),t⟑t))))
-Base.atan(t::T) where T<:TensorAlgebra{V} where V = (i=V(I);it=i⟑t;Base.:/(Base.:-(i),2)*Base.:-(Base.log(one(V)+it),Base.log(Base.:-(one(V),it))))
-Base.acot(t::T) where T<:TensorAlgebra{V} where V = (i=V(I);Base.:/(Base.:-(i),2)*Base.:-(Base.log(Base.:-(t,i)),Base.log(t+i)))
-Base.sinc(t::T) where T<:TensorAlgebra{V} where V = iszero(t) ? one(V) : (x=(1π)*t;Base.:/(Base.sin(x),x))
-Base.cosc(t::T) where T<:TensorAlgebra{V} where V = iszero(t) ? zero(V) : (x=(1π)*t; Base.:-(Base.:/(Base.cos(x),t), Base.:/(sin(x),(x⟑t))))
+for (op,logm,field) ∈ ((:⟑,:(Base.log),false),(:wedgedot_metric,:log_metric,true)); args = field ? (:g,) : ()
+    @eval begin
+@inline Base.cos(t::T,$(args...)) where T<:TensorAlgebra{V} where V = Base.cosh($op(V(I),t,$(args...)),$(args...))
+@inline Base.sin(t::T,$(args...)) where T<:TensorAlgebra{V} where V = (i=V(I);Base.:/(Base.sinh($op(i,t,$(args...)),$(args...)),i,$(args...)))
+@inline Base.tan(t::T,$(args...)) where T<:TensorAlgebra = Base.:/(Base.sin(t,$(args...)),Base.cos(t,$(args...)),$(args...))
+@inline Base.cot(t::T,$(args...)) where T<:TensorAlgebra = Base.:/(Base.cos(t,$(args...)),Base.sin(t,$(args...)),$(args...))
+@inline Base.sec(t::T,$(args...)) where T<:TensorAlgebra = Base.inv(Base.cos(t,$(args...)),$(args...))
+@inline Base.csc(t::T,$(args...)) where T<:TensorAlgebra = Base.inv(Base.sin(t,$(args...)),$(args...))
+@inline Base.asec(t::T,$(args...)) where T<:TensorAlgebra = Base.acos(Base.inv(t,$(args...)),$(args...))
+@inline Base.acsc(t::T,$(args...)) where T<:TensorAlgebra = Base.asin(Base.inv(t,$(args...)),$(args...))
+@inline Base.sech(t::T,$(args...)) where T<:TensorAlgebra = Base.inv(Base.cosh(t,$(args...)),$(args...))
+@inline Base.csch(t::T,$(args...)) where T<:TensorAlgebra = Base.inv(Base.sinh(t,$(args...)),$(args...))
+@inline Base.asech(t::T,$(args...)) where T<:TensorAlgebra = Base.acosh(Base.inv(t,$(args...)),$(args...))
+@inline Base.acsch(t::T,$(args...)) where T<:TensorAlgebra = Base.asinh(Base.inv(t,$(args...)),$(args...))
+@inline Base.tanh(t::T,$(args...)) where T<:TensorAlgebra = Base.:/(Base.sinh(t,$(args...)),Base.cosh(t,$(args...)),$(args...))
+@inline Base.coth(t::T,$(args...)) where T<:TensorAlgebra = Base.:/(Base.cosh(t,$(args...)),Base.sinh(t,$(args...)),$(args...))
+@inline Base.asinh(t::T,$(args...)) where T<:TensorAlgebra{V} where V = $logm(t+Base.sqrt(one(V)+$op(t,t,$(args...)),$(args...)),$(args...))
+@inline Base.acosh(t::T,$(args...)) where T<:TensorAlgebra{V} where V = $logm(t+Base.sqrt(Base.:-($op(t,t,$(args...)),one(V)),$(args...)),$(args...))
+@inline Base.atanh(t::T,$(args...)) where T<:TensorAlgebra{V} where V = Base.:/(Base.:-($logm(one(V)+t,$(args...)),$logm(Base.:-(one(V),t),$(args...))),2)
+@inline Base.acoth(t::T,$(args...)) where T<:TensorAlgebra{V} where V = Base.:/(Base.:-($logm(t+one(V),$(args...)),$logm(Base.:-(t,one(V)),$(args...))),2)
+Base.asin(t::T,$(args...)) where T<:TensorAlgebra{V} where V = (i=V(I);$op(Base.:-(i),$logm($op(i,t,$(args...))+Base.sqrt(Base.:-(one(V),$op(t,t,$(args...))),$(args...)),$(args...)),$(args...)))
+Base.acos(t::T,$(args...)) where T<:TensorAlgebra{V} where V = (i=V(I);$op(Base.:-(i),$logm(t+$op(i,Base.sqrt(Base.:-(one(V),$op(t,t,$(args...))),$(args...)),$(args...)),$(args...)),$(args...)))
+Base.atan(t::T,$(args...)) where T<:TensorAlgebra{V} where V = (i=V(I);it=$op(i,t,$(args...));$op(Base.:/(Base.:-(i),2),Base.:-($logm(one(V)+it,$(args...)),$logm(Base.:-(one(V),it),$(args...))),$(args...)))
+Base.acot(t::T,$(args...)) where T<:TensorAlgebra{V} where V = (i=V(I);$op(Base.:/(Base.:-(i),2),Base.:-($logm(Base.:-(t,i),$(args...)),$logm(t+i,$(args...))),$(args...)))
+Base.sinc(t::T,$(args...)) where T<:TensorAlgebra{V} where V = iszero(t) ? one(V) : (x=(1π)*t;Base.:/(Base.sin(x,$(args...)),x,$(args...)))
+Base.cosc(t::T,$(args...)) where T<:TensorAlgebra{V} where V = iszero(t) ? zero(V) : (x=(1π)*t; Base.:-(Base.:/(Base.cos(x,$(args...)),t,$(args...)), Base.:/(sin(x,$(args...)),$op(x,t,$(args...)),$(args...))))
+end end
 
 # absolute value norm
 
 @inline Base.abs(t::T) where T<:TensorAlgebra = Base.sqrt(Base.abs2(t))
+@inline Base.abs(t::T,g) where T<:TensorAlgebra = Base.sqrt(Base.abs2(t,g),g)
 @inline Base.abs2(t::T) where T<:TensorAlgebra = (a=(~t)⟑t; isscalar(a) ? scalar(a) : a)
+@inline Base.abs2(t::T,g) where T<:TensorAlgebra = (a=wedgedot_metric(~t,t,g); isscalar(a) ? scalar(a) : a)
 @inline Base.abs2(t::T) where T<:TensorGraded = contraction(t,t)
+@inline Base.abs2(t::T,g) where T<:TensorGraded = contraction_metric(t,t,g)
 @inline norm(z) = LinearAlgebra.norm(z)
 @inline LinearAlgebra.norm(t::T) where T<:TensorAlgebra = norm(value(t))
 @inline Base.iszero(t::T) where T<:TensorAlgebra = LinearAlgebra.norm(t) ≈ 0
@@ -362,6 +382,7 @@ Base.cosc(t::T) where T<:TensorAlgebra{V} where V = iszero(t) ? zero(V) : (x=(1�
 Geometric norm defined as `geomabs(t) = abs(t) + pseudoabs(t)`.
 """
 @inline geomabs(t::T) where T<:TensorAlgebra = Base.abs(t)+pseudoabs(t)
+@inline geomabs(t::T,g) where T<:TensorAlgebra = Base.abs(t,g)+pseudoabs(t,g)
 
 """
     unit(t::Number)
@@ -369,6 +390,7 @@ Geometric norm defined as `geomabs(t) = abs(t) + pseudoabs(t)`.
 Normalization defined as `unit(t) = t/abs(t)`.
 """
 @inline unit(t::T) where T<:Number = Base.:/(t,Base.abs(t))
+@inline unit(t::T,g) where T<:Number = Base.:/(t,Base.abs(t,g),g)
 
 """
     unitize(t::TensorAlgebra)
@@ -376,6 +398,7 @@ Normalization defined as `unit(t) = t/abs(t)`.
 Pseudo-normalization defined as `unitize(t) = t/value(pseudoabs(t))`.
 """
 @inline unitize(t::T) where T<:Number = Base.:/(t,value(pseudoabs(t)))
+@inline unitize(t::T,g) where T<:Number = Base.:/(t,value(pseudoabs(t,g)),g)
 
 """
     unitnorm(t::TensorAlgebra)
@@ -383,6 +406,7 @@ Pseudo-normalization defined as `unitize(t) = t/value(pseudoabs(t))`.
 Geometric normalization defined as `unitnorm(t) = t/norm(geomabs(t))`.
 """
 @inline unitnorm(t::T) where T<:Number = Base.:/(t,norm(geomabs(t)))
+@inline unitnorm(t::T,g) where T<:Number = Base.:/(t,norm(geomabs(t,g)),g)
 
 """
     @pseudo fun(args...)
@@ -421,9 +445,13 @@ Complemented `$fun` defined as `complementleft($fun(complementright(t)))`.
         @doc $str $ant
         @inline $ant(t::T) where T<:TensorAlgebra = complementleft(Base.$fun(complementright(t)))
     end
+    fun ≠ :log && @eval begin
+        @inline $ant(t::T,g) where T<:TensorAlgebra = complementleft(Base.$fun(complementright(t),g))
+    end
 end
-const antiabs,antiabs2,pseudometric = pseudoabs,pseudoabs2,antimetric
-export pseudosandwich, antisandwich
+@inline pseudolog_metric(t::T,g) where T<:TensorAlgebra = complementleft(log_metric(complementright(t),g))
+const antiabs,antiabs2,antimetric,pseudometric = pseudoabs,pseudoabs2,cometric,cometric
+export pseudosandwich, antisandwich, antimetric
 
 """
     pseudosandwich(x::TensorAlgebra,R::TensorAlgebra)
@@ -431,6 +459,7 @@ export pseudosandwich, antisandwich
 Defined as `complementleft(sandwich(complementright(x),complementright(R)))`.
 """
 pseudosandwich(x,R) = complementleft(sandwich(complementright(x),complementright(R)))
+pseudosandwich(x,R,g) = complementleft(sandwich(complementright(x),complementright(R),g))
 
 """
     antisandwich(x::TensorAlgebra,R::TensorAlgebra)
@@ -438,6 +467,7 @@ pseudosandwich(x,R) = complementleft(sandwich(complementright(x),complementright
 Defined as `complementleft(complementright(R)>>>complementright(x))`.
 """
 antisandwich(R,x) = complementleft(complementright(R)>>>complementright(x))
+antisandwich(R,x,g) = complementleft(>>>(complementright(R),complementright(x),g))
 
 # postfix operators
 
