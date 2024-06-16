@@ -334,6 +334,20 @@ for base ∈ (2,10)
     @eval Base.$fe(t::T) where T<:TensorAlgebra = Base.exp(Base.log($base)*t)
 end
 
+for op ∈ (:/,:^)
+    @eval begin
+        @inline Base.$op(a::Real,b::Real,g) = Base.$op(a,b)
+        @inline Base.$op(a::Real,b::Complex,g) = Base.$op(a,b)
+        @inline Base.$op(a::Complex,b::Real,g) = Base.$op(a,b)
+        @inline Base.$op(a::Complex,b::Complex,g) = Base.$op(a,b)
+    end
+end
+for op ∈ (:abs,:abs2,:cos,:sin,:tan,:cot,:sec,:csc,:asec,:acsc,:sech,:csch,:asech,:acsch,:tanh,:coth,:asinh,:acosh,:atanh,:acoth,:asin,:acos,:atan,:acot,:sinc,:cosc)
+    @eval begin
+        @inline Base.$op(t::Real,g) = Base.$op(t)
+        @inline Base.$op(t::Complex,g) = Base.$op(t)
+    end
+end
 for (op,logm,field) ∈ ((:⟑,:(Base.log),false),(:wedgedot_metric,:log_metric,true)); args = field ? (:g,) : ()
     @eval begin
 @inline Base.cos(t::T,$(args...)) where T<:TensorAlgebra{V} where V = Base.cosh($op(V(I),t,$(args...)),$(args...))
