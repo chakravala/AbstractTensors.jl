@@ -322,6 +322,8 @@ contraction(a,b) = LinearAlgebra.dot(a,b)
 wedgedot_metric(a::Real,b,g) = Base.:*(a,b)
 wedgedot_metric(a,b::Real,g) = Base.:*(a,b)
 wedgedot_metric(a::Real,b::Real,g) = Base.:*(a,b)
+wedgedot_metric(a::Complex,b::Real,g) = Base.:*(a,b)
+wedgedot_metric(a::Real,b::Complex,g) = Base.:*(a,b)
 wedgedot_metric(a::Complex,b,g) = Base.:*(a,b)
 wedgedot_metric(a,b::Complex,g) = Base.:*(a,b)
 wedgedot_metric(a::Complex,b::Complex,g) = Base.:*(a,b)
@@ -342,7 +344,7 @@ for op ∈ (:/,:^)
         @inline Base.$op(a::Complex,b::Complex,g) = Base.$op(a,b)
     end
 end
-for op ∈ (:abs,:abs2,:cos,:sin,:tan,:cot,:sec,:csc,:asec,:acsc,:sech,:csch,:asech,:acsch,:tanh,:coth,:asinh,:acosh,:atanh,:acoth,:asin,:acos,:atan,:acot,:sinc,:cosc)
+for op ∈ (:abs,:abs2,:cos,:sin,:tan,:cot,:sec,:csc,:asec,:acsc,:sech,:csch,:asech,:acsch,:tanh,:coth,:asinh,:acosh,:atanh,:acoth,:asin,:acos,:atan,:acot,:sinc,:cosc,:cis,:sqrt,:cbrt,:exp,:exp2,:exp10,:log,:log2,:log10)
     @eval begin
         @inline Base.$op(t::Real,g) = Base.$op(t)
         @inline Base.$op(t::Complex,g) = Base.$op(t)
