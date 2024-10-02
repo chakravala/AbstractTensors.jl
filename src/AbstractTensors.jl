@@ -32,6 +32,12 @@ Universal root tensor type with `Manifold` instance `V` with scalar field `T`.
 abstract type TensorAlgebra{V,T} <: Number end
 TensorAlgebra{V}(t::TensorAlgebra{V}) where V = t
 TensorAlgebra{V}(t::TensorAlgebra{W}) where {V,W} = (V∪W)(t)
+
+"""
+    istensor(t) -> Bool
+
+Test whether `t` is some subtype of `TensorAlgebra`.
+"""
 Base.@pure istensor(t::T) where T<:TensorAlgebra = true
 Base.@pure istensor(t) = false
 
@@ -41,6 +47,12 @@ Base.@pure istensor(t) = false
 Basis parametrization locally homeomorphic to `T^n` product topology.
 """
 abstract type Manifold{V,T} <: TensorAlgebra{V,T} end
+
+"""
+    ismanifold(t) -> Bool
+
+Test whether `t` is some subtype of `Manifold`.
+"""
 Base.@pure ismanifold(t::T) where T<:Manifold = true
 Base.@pure ismanifold(t) = false
 
@@ -51,6 +63,12 @@ Grade `G` elements of a `Manifold` instance `V` with scalar field `T`.
 """
 abstract type TensorGraded{V,G,T} <: Manifold{V,T} end
 const TAG = (:TensorAlgebra,:TensorGraded)
+
+"""
+    isgraded(t) -> Bool
+
+Test whether `t` is some subtype of `TensorGraded`.
+"""
 Base.@pure isgraded(t::T) where T<:TensorGraded = true
 Base.@pure isgraded(t) = false
 
@@ -88,6 +106,12 @@ const Trivector{V,T} = TensorGraded{V,3,T}
 Single coefficient for grade `G` of a `Manifold` instance `V` with scalar field `T`.
 """
 abstract type TensorTerm{V,G,T} <: TensorGraded{V,G,T} end
+
+"""
+    isterm(t) -> Bool
+
+Test whether `t` is some subtype of `TensorTerm`.
+"""
 Base.@pure isterm(t::T) where T<:TensorTerm = true
 Base.@pure isterm(t) = false
 Base.isfinite(b::T) where T<:TensorTerm = isfinite(value(b))
@@ -98,6 +122,12 @@ Base.isfinite(b::T) where T<:TensorTerm = isfinite(value(b))
 Elements of `Manifold` instance `V` having non-homogenous grade with scalar field `T`.
 """
 abstract type TensorMixed{V,T} <: TensorAlgebra{V,T} end
+
+"""
+    ismixed(t) -> Bool
+
+Test whether `t` is some subtype of `TensorMixed`.
+"""
 Base.@pure ismixed(t::T) where T<:TensorMixed = true
 Base.@pure ismixed(t) = false
 
@@ -559,7 +589,7 @@ const RealArray{N,T<:Real} = AbstractArray{T,N}
 
 export TupleVector, Values, Variables, FixedVector
 
-import StaticVectors: Values, Variables, FixedVector, TupleVector, _diff
+import StaticVectors: Values, Variables, FixedVector, TupleVector, evens, _diff
 import StaticVectors: SVector, MVector, SizedVector, countvalues, evenvalues
 
 end # module
