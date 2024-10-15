@@ -280,7 +280,7 @@ export wedgedot, veedot, contraction, expansion, metric, pseudometric, cometric,
 export istensor, ismanifold, isterm, isgraded, ismixed, rank, mdims, tdims, gdims, sandwich
 export scalar, isscalar, vector, isvector, bivector, isbivector, volume, isvolume, hodge
 export value, valuetype, interop, interform, involute, unit, unitize, unitnorm, even, odd
-export ⟑, ⊘, ⊖, ⊗, ⊛, ⊙, ⊠, ×, ⨼, ⨽, ⋆, ∗, ⁻¹, ǂ, ₊, ₋, ˣ, antiabs, antiabs2, geomabs
+export ⟑, ⊘, ⊖, ⊗, ⊛, ⊙, ⊠, ×, ⨼, ⨽, ⋆, ∗, ⁻¹, ǂ, ₊, ₋, ˣ, antiabs, antiabs2, geomabs, @co
 
 # some shared presets
 
@@ -311,7 +311,7 @@ const complementright = !
 const ⋆ = complementrighthodge
 const hodge = complementrighthodge
 const ⊘ = sandwich
-const ⊖,⟑,times,antidot,pseudodot = wedgedot,wedgedot,wedgedot,expansion,expansion
+const ⊖,⟑,times,antidot,pseudodot,codot = wedgedot,wedgedot,wedgedot,expansion,expansion,expansion
 @inline Base.:|(t::T) where T<:TensorAlgebra = hodge(t)
 @inline Base.:!(t::UniformScaling{T}) where T = T<:Bool ? (t.λ ? 1 : 0) : t.λ
 
@@ -339,7 +339,7 @@ Base.:∘(a::A,b::B) where {A<:TensorAlgebra,B<:TensorAlgebra} = expansion(a,b)
 for op ∈ (:(Base.:+),:(Base.:*),:wedgedot)
     @eval $op(t::T) where T<:TensorAlgebra = t
 end
-for op ∈ (:⊙,:⊠,:¬,:⋆,:clifford,:basis,:complementleft,:complementlefthodge,:complementleftanti,:complementrightanti,:metric,:cometric)
+for op ∈ (:⊙,:⊠,:¬,:⋆,:clifford,:basis,:complementleft,:complementlefthodge,:complementleftanti,:complementrightanti)
     @eval function $op end
 end
 for op ∈ (:scalar,:involute,:even)
@@ -359,6 +359,20 @@ wedgedot_metric(a,b::Complex,g) = Base.:*(a,b)
 wedgedot_metric(a::Complex,b::Complex,g) = Base.:*(a,b)
 contraction_metric(a::Real,b::Real,g) = contraction(a,b)
 contraction_metric(a::Complex,b::Complex,g) = contraction(a,b)
+LinearAlgebra.norm(a::TensorMixed,b::TensorMixed) = norm(a-b)
+LinearAlgebra.norm(a::TensorGraded,b::TensorGraded) = norm(a-b)
+for (op,fun) ∈ ((:metric,:abs),(:cometric,:pseudoabs))
+    @eval begin
+        $op(a::TensorMixed,b::TensorMixed) = $fun(a-b)
+        $op(a::TensorGraded,b::TensorGraded) = $fun(a-b)
+        $op(a::TensorMixed,b::TensorGraded) = $fun(a-b)
+        $op(a::TensorGraded,b::TensorMixed) = $fun(a-b)
+        $op(a::Real,b::Real) = $fun(a-b)
+        $op(a::Complex,b::Complex) = $fun(a-b)
+        $op(a::Real,b::Complex) = $fun(a-b)
+        $op(a::Complex,b::Real) = $fun(a-b)
+    end
+end
 
 for base ∈ (2,10)
     fl,fe = (Symbol(:log,base),Symbol(:exp,base))
@@ -425,10 +439,10 @@ end end
 """
     geomabs(t::TensorAlgebra)
 
-Geometric norm defined as `geomabs(t) = abs(t) + pseudoabs(t)`.
+Geometric norm defined as `geomabs(t) = abs(t) + coabs(t)`.
 """
-@inline geomabs(t::T) where T<:TensorAlgebra = Base.abs(t)+pseudoabs(t)
-@inline geomabs(t::T,g) where T<:TensorAlgebra = Base.abs(t,g)+pseudoabs(t,g)
+@inline geomabs(t::T) where T<:TensorAlgebra = Base.abs(t)+coabs(t)
+@inline geomabs(t::T,g) where T<:TensorAlgebra = Base.abs(t,g)+coabs(t,g)
 
 """
     unit(t::Number)
@@ -439,12 +453,13 @@ Normalization defined as `unit(t) = t/abs(t)`.
 @inline unit(t::T,g) where T<:Number = Base.:/(t,Base.abs(t,g),g)
 
 """
-    unitize(t::TensorAlgebra)
+    counit(t::TensorAlgebra)
 
-Pseudo-normalization defined as `unitize(t) = t/value(pseudoabs(t))`.
+Pseudo-normalization defined as `unitize(t) = t/value(coabs(t))`.
 """
-@inline unitize(t::T) where T<:Number = Base.:/(t,value(pseudoabs(t)))
-@inline unitize(t::T,g) where T<:Number = Base.:/(t,value(pseudoabs(t,g)),g)
+@inline counit(t::T) where T<:Number = Base.:/(t,value(coabs(t)))
+@inline counit(t::T,g) where T<:Number = Base.:/(t,value(coabs(t,g)),g)
+const unitize = counit
 
 """
     unitnorm(t::TensorAlgebra)
@@ -453,6 +468,31 @@ Geometric normalization defined as `unitnorm(t) = t/norm(geomabs(t))`.
 """
 @inline unitnorm(t::T) where T<:Number = Base.:/(t,norm(geomabs(t)))
 @inline unitnorm(t::T,g) where T<:Number = Base.:/(t,norm(geomabs(t,g)),g)
+
+"""
+    @co fun(args...)
+
+Use the macro `@co` to make a pseudoscalar `complement` variant of any functions:
+
+```Julia
+julia> @co myfun(x)
+comyfun (generic function with 1 method)
+```
+
+Now `comyfun(x) = complementleft(myfun(complementright(x)))` is defined.
+
+```Julia
+julia> @co myproduct(a,b)
+comyproduct (generic function with 1 method)
+```
+Now `comyproduct(a,b) = complementleft(myproduct(!a,!b))` is defined.
+"""
+macro co(fun)
+    ant = Symbol(:co,fun.args[1])
+    com = [:(complementright($(esc(fun.args[t])))) for t ∈ 2:length(fun.args)]
+    return Expr(:function,Expr(:call,esc(ant),esc.(fun.args[2:end])...),
+        Expr(:block,:(complementleft($(esc(fun.args[1]))($(com...))))))
+end
 
 """
     @pseudo fun(args...)
@@ -480,32 +520,35 @@ macro pseudo(fun)
 end
 
 for fun ∈ (:abs,:abs2,:sqrt,:cbrt,:exp,:log,:inv,:sin,:cos,:tan,:sinh,:cosh,:tanh)
-    ant = Symbol(:pseudo,fun)
-    str = """
+    for ant ∈ (Symbol(:pseudo,fun),Symbol(:co,fun))
+        str = """
     $ant(t::TensorAlgebra)
 
 Complemented `$fun` defined as `complementleft($fun(complementright(t)))`.
-    """
-    @eval begin
-        export $ant
-        @doc $str $ant
-        @inline $ant(t::T) where T<:TensorAlgebra = complementleft(Base.$fun(complementright(t)))
-    end
-    fun ≠ :log && @eval begin
-        @inline $ant(t::T,g) where T<:TensorAlgebra = complementleft(Base.$fun(complementright(t),g))
+        """
+        @eval begin
+            export $ant
+            @doc $str $ant
+            @inline $ant(t::T) where T<:TensorAlgebra = complementleft(Base.$fun(complementright(t)))
+        end
+        fun ≠ :log && @eval begin
+            @inline $ant(t::T,g) where T<:TensorAlgebra = complementleft(Base.$fun(complementright(t),g))
+        end
     end
 end
+@inline colog_metric(t::T,g) where T<:TensorAlgebra = complementleft(log_metric(complementright(t),g))
 @inline pseudolog_metric(t::T,g) where T<:TensorAlgebra = complementleft(log_metric(complementright(t),g))
-const antiabs,antiabs2,antimetric,pseudometric = pseudoabs,pseudoabs2,cometric,cometric
-export pseudosandwich, antisandwich, antimetric
+const antiabs,antiabs2,antimetric,pseudometric = coabs,coabs2,cometric,cometric
+export cosandwich, pseudosandwich, antisandwich, antimetric
 
 """
-    pseudosandwich(x::TensorAlgebra,R::TensorAlgebra)
+    cosandwich(x::TensorAlgebra,R::TensorAlgebra)
 
 Defined as `complementleft(sandwich(complementright(x),complementright(R)))`.
 """
-pseudosandwich(x,R) = complementleft(sandwich(complementright(x),complementright(R)))
-pseudosandwich(x,R,g) = complementleft(sandwich(complementright(x),complementright(R),g))
+cosandwich(x,R) = complementleft(sandwich(complementright(x),complementright(R)))
+cosandwich(x,R,g) = complementleft(sandwich(complementright(x),complementright(R),g))
+const pseudosandwich = cosandwich
 
 """
     antisandwich(x::TensorAlgebra,R::TensorAlgebra)
