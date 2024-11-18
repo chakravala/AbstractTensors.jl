@@ -23,7 +23,7 @@ AbstractTensors.plus(s::SpecialTensor{V},::SpecialTensor{V}) where V = s
 ## tensor pseudoscalar (trivial test)
 op(a::TensorAlgebra{V},b::UniformScaling) where V = op(a,V(b))
 op(a::UniformScaling,b::TensorAlgebra{V}) where V = op(V(a),b)
-(W::Signature)(s::UniformScaling) where V = SpecialTensor{W}()
+(W::Signature)(s::UniformScaling) = SpecialTensor{W}()
 @test Manifold(op(a,LinearAlgebra.I)) == ℝ
 @test Manifold(op(LinearAlgebra.I,a)) == ℝ
 @test Manifold(+(a,LinearAlgebra.I)) == ℝ
