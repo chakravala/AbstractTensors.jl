@@ -44,7 +44,7 @@ Base.@pure istensor(t) = false
 """
     Manifold{V,T} <: TensorAlgebra{V,T}
 
-Basis parametrization locally homeomorphic to `T^n` product topology.
+Basis parameter locally homeomorphic to `V::Submanifold{M}` T-module product topology.
 """
 abstract type Manifold{V,T} <: TensorAlgebra{V,T} end
 
@@ -359,6 +359,10 @@ wedgedot_metric(a,b::Complex,g) = Base.:*(a,b)
 wedgedot_metric(a::Complex,b::Complex,g) = Base.:*(a,b)
 contraction_metric(a::Real,b::Real,g) = contraction(a,b)
 contraction_metric(a::Complex,b::Complex,g) = contraction(a,b)
+contraction_metric(a::Real,b::TensorAlgebra,g) = contraction(a,b)
+contraction_metric(a::Complex,b::TensorAlgebra,g) = contraction(a,b)
+contraction_metric(a::TensorAlgebra,b::Real,g) = contraction(a,b)
+contraction_metric(a::TensorAlgebra,b::Complex,g) = contraction(a,b)
 LinearAlgebra.norm(a::TensorMixed,b::TensorMixed) = norm(a-b)
 LinearAlgebra.norm(a::TensorGraded,b::TensorGraded) = norm(a-b)
 for (op,fun) ∈ ((:metric,:abs),(:cometric,:pseudoabs))
