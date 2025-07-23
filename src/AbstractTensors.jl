@@ -392,7 +392,7 @@ for op ∈ (:/,:^)
         @inline Base.$op(a::Complex,b::Complex,g) = Base.$op(a,b)
     end
 end
-for op ∈ (:abs,:abs2,:cos,:sin,:tan,:cot,:sec,:csc,:asec,:acsc,:sech,:csch,:asech,:acsch,:tanh,:coth,:asinh,:acosh,:atanh,:acoth,:asin,:acos,:atan,:acot,:sinc,:cosc,:cis,:sqrt,:cbrt,:exp,:exp2,:exp10,:log2,:log10)
+for op ∈ (:abs,:abs2,:cos,:sin,:tan,:cot,:sec,:csc,:asec,:acsc,:sech,:csch,:asech,:acsch,:cosh,:sinh,:tanh,:coth,:asinh,:acosh,:atanh,:acoth,:asin,:acos,:atan,:acot,:sinc,:cosc,:cis,:sqrt,:cbrt,:exp,:exp2,:exp10,:log2,:log10)
     @eval begin
         @inline Base.$op(t::Real,g) = Base.$op(t)
         @inline Base.$op(t::Complex,g) = Base.$op(t)
