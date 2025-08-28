@@ -400,6 +400,8 @@ for op ∈ (:abs,:abs2,:cos,:sin,:tan,:cot,:sec,:csc,:asec,:acsc,:sech,:csch,:as
 end
 @inline Base.log(t::Real,g::TensorAlgebra) = Base.log(t)
 @inline Base.log(t::Complex,g::TensorAlgebra) = Base.log(t)
+@inline log_metric(t::Real,g) = Base.log(t)
+@inline log_metric(t::Complex,g) = Base.log(t)
 for (op,logm,field) ∈ ((:⟑,:(Base.log),false),(:wedgedot_metric,:log_metric,true)); args = field ? (:g,) : ()
     @eval begin
 @inline Base.cos(t::T,$(args...)) where T<:TensorAlgebra{V} where V = Base.cosh($op(V(I),t,$(args...)),$(args...))
