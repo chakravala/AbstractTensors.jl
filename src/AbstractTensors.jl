@@ -438,6 +438,8 @@ end end
 @inline Base.abs2(t::T,g) where T<:TensorAlgebra = (a=wedgedot_metric(~t,t,g); isscalar(a) ? scalar(a) : a)
 @inline Base.abs2(t::T) where T<:TensorGraded = contraction(t,t)
 @inline Base.abs2(t::T,g) where T<:TensorGraded = contraction_metric(t,t,g)
+@inline Base.angle(t::Real,g) = angle(t)
+@inline Base.angle(t::Complex,g) = angle(t)
 @inline norm(z) = LinearAlgebra.norm(z)
 @inline LinearAlgebra.norm(t::T) where T<:TensorAlgebra = norm(value(t))
 @inline Base.iszero(t::T) where T<:TensorAlgebra = LinearAlgebra.norm(t) ≈ 0
